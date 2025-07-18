@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || '/api',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5001/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -265,6 +265,7 @@ export const tradesAPI = {
       const response = await api.get('/trades', { params });
       return response.data;
     } catch (error) {
+      console.error('❌ Trades API Error:', error.response?.data || error.message);
       throw error.response?.data || error;
     }
   },
@@ -344,13 +345,27 @@ export const tradesAPI = {
     }
   },
 
-  // Get comprehensive statistics for dashboard
-  getComprehensiveStats: async (userId) => {
+  // Get comprehensive statistics for dashboard (now unused - we use client-side calculation)
+  getComprehensiveStats: async (userId, timeRangeOrCustom = null) => {
     try {
       const params = userId ? { userId } : {};
+      
+      // Handle custom date range object or regular time range string
+      if (timeRangeOrCustom) {
+        if (typeof timeRangeOrCustom === 'object' && timeRangeOrCustom.startDate && timeRangeOrCustom.endDate) {
+          // Custom date range
+          params.startDate = timeRangeOrCustom.startDate;
+          params.endDate = timeRangeOrCustom.endDate;
+        } else {
+          // Regular time range string
+          params.timeRange = timeRangeOrCustom;
+        }
+      }
+      
       const response = await api.get('/trades/stats', { params });
       return response.data;
     } catch (error) {
+      console.error('❌ Stats API Error:', error.response?.data || error.message);
       throw error.response?.data || error;
     }
   },

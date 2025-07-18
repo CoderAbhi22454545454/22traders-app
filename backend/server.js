@@ -7,7 +7,18 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://fx-trading-journal.netlify.app',
+    'https://687a025701b4a620efa7d732--fx-trading-journal.netlify.app',
+    'http://localhost:3000',
+    'http://localhost:5001',
+    'http://127.0.0.1:5001',
+    'http://192.168.31.216:5001',
+  
+  ],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined'));

@@ -5,6 +5,7 @@ import Analytics from './components/Analytics';
 import TradeDetail from './components/TradeDetail';
 import Login from './components/Login';
 import Signup from './components/Signup';
+import PWAInstall from './components/PWAInstall';
 import { NotificationProvider } from './components/Notifications';
 import { 
   HomeIcon, 
@@ -211,23 +212,15 @@ function App() {
             </Routes>
           </main>
           
+          {/* PWA Install Component */}
+          <PWAInstall />
+          
           {/* Footer */}
           <footer className="bg-white border-t border-gray-200 py-4">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-600">
                   © 2024 Trade Journal. Built for professional traders.
-                </div>
-                <div className="flex items-center space-x-4">
-                  <button className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
-                    Help
-                  </button>
-                  <button className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
-                    Support
-                  </button>
-                  <button className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
-                    Privacy
-                  </button>
                 </div>
               </div>
             </div>

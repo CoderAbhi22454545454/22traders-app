@@ -88,7 +88,7 @@ const tradeValidation = [
 // GET /api/trades - Get all trades with optional filters
 router.get('/', async (req, res) => {
   try {
-    const { date, instrument, userId, page = 1, limit = 10 } = req.query;
+    const { date, instrument, userId, page = 1, limit = 10, timeRange } = req.query;
     
     // Build filter object
     const filter = {};
@@ -99,6 +99,39 @@ router.get('/', async (req, res) => {
       const endDate = new Date(date);
       endDate.setDate(endDate.getDate() + 1);
       filter.date = { $gte: startDate, $lt: endDate };
+    } else if (timeRange) {
+      // Add time range filtering (same logic as stats endpoint)
+      const now = new Date();
+      let startDate;
+      
+      switch (timeRange) {
+        case '7d':
+        case '1w':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '10d':
+          startDate = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
+          break;
+        case '1m':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case '2m':
+          startDate = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+          break;
+        case '3m':
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case '6m':
+          startDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+          break;
+        case '1y':
+          startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      }
+      
+      filter.date = { $gte: startDate };
     }
     if (instrument) filter.instrument = new RegExp(instrument, 'i');
 
@@ -326,8 +359,43 @@ router.get('/dates', async (req, res) => {
 // GET /api/trades/stats - Get comprehensive trading statistics
 router.get('/stats', async (req, res) => {
   try {
-    const { userId } = req.query;
+    const { userId, timeRange } = req.query;
     const filter = userId ? { userId: new mongoose.Types.ObjectId(userId) } : {};
+    
+    // Add time range filtering
+    if (timeRange) {
+      const now = new Date();
+      let startDate;
+      
+      switch (timeRange) {
+        case '7d':
+        case '1w':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '10d':
+          startDate = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
+          break;
+        case '1m':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case '2m':
+          startDate = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+          break;
+        case '3m':
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case '6m':
+          startDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+          break;
+        case '1y':
+          startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      }
+      
+      filter.date = { $gte: startDate };
+    }
 
     // Basic statistics
     const basicStats = await Trade.aggregate([
