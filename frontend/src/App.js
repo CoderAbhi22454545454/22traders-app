@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import Analytics from './components/Analytics';
+import Trades from './components/Trades';
 import TradeDetail from './components/TradeDetail';
 import Login from './components/Login';
 import Signup from './components/Signup';
@@ -35,11 +36,11 @@ const Navigation = ({ user, onLogout }) => {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
-              <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TJ</span>
+              <div className="h-8 w-8 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">22</span>
               </div>
-              <h1 className="ml-3 text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Trade Journal
+              <h1 className="ml-3 text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
+                22 Traders FX
               </h1>
             </div>
             <div className="hidden sm:ml-8 sm:flex sm:space-x-8">
@@ -201,7 +202,7 @@ function App() {
               />
               <Route 
                 path="/trades" 
-                element={<Navigate to="/dashboard" replace />} 
+                element={<Trades userId={user.id} />} 
               />
               <Route 
                 path="/trade/:id" 

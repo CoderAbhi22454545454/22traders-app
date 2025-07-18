@@ -295,64 +295,259 @@ const TradeDetail = ({ userId }) => {
                     </div>
                   </form>
                 ) : (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500">Date</h3>
-                        <p className="mt-1 text-lg text-gray-900">{formatDateTime(trade.date)}</p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500">Instrument</h3>
-                        <p className="mt-1 text-lg text-gray-900">{trade.instrument}</p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500">Direction</h3>
-                        <p className="mt-1 text-lg text-gray-900">{trade.direction}</p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500">Strategy</h3>
-                        <p className="mt-1 text-lg text-gray-900">{trade.strategy}</p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500">Session</h3>
-                        <p className="mt-1 text-lg text-gray-900">{trade.session}</p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500">Execution Score</h3>
-                        <p className="mt-1 text-lg text-gray-900">{trade.executionScore}/10</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500">Entry Price</h3>
-                        <p className="mt-1 text-lg text-gray-900">{trade.entryPrice}</p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500">Exit Price</h3>
-                        <p className="mt-1 text-lg text-gray-900">{trade.exitPrice}</p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500">P&L</h3>
-                        <p className={`mt-1 text-lg font-semibold ${
-                          trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {formatCurrency(trade.pnl)}
-                        </p>
+                  <div className="space-y-8">
+                    {/* Basic Trade Info */}
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2">
+                        Basic Information
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500">Trade Number</h4>
+                          <p className="mt-1 text-lg text-gray-900">{trade.tradeNumber || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500">Date</h4>
+                          <p className="mt-1 text-lg text-gray-900">{formatDateTime(trade.date)}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500">Instrument</h4>
+                          <p className="mt-1 text-lg text-gray-900">{trade.instrument}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500">Direction</h4>
+                          <p className="mt-1 text-lg text-gray-900">{trade.direction}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500">Strategy</h4>
+                          <p className="mt-1 text-lg text-gray-900">{trade.strategy}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500">Session</h4>
+                          <p className="mt-1 text-lg text-gray-900">{trade.session}</p>
+                        </div>
                       </div>
                     </div>
 
-                    {trade.emotions && (
+                    {/* Trade Execution */}
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2">
+                        Trade Execution
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500">Entry Price</h4>
+                          <p className="mt-1 text-lg text-gray-900">{trade.entryPrice}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500">Exit Price</h4>
+                          <p className="mt-1 text-lg text-gray-900">{trade.exitPrice}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500">Lot Size</h4>
+                          <p className="mt-1 text-lg text-gray-900">{trade.lotSize || 'N/A'}</p>
+                        </div>
+                        {trade.stopLoss && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">Stop Loss</h4>
+                            <p className="mt-1 text-lg text-gray-900">{trade.stopLoss}</p>
+                          </div>
+                        )}
+                        {trade.takeProfit && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">Take Profit</h4>
+                            <p className="mt-1 text-lg text-gray-900">{trade.takeProfit}</p>
+                          </div>
+                        )}
+                        {trade.entryTime && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">Entry Time</h4>
+                            <p className="mt-1 text-lg text-gray-900">{trade.entryTime}</p>
+                          </div>
+                        )}
+                        {trade.exitTime && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">Exit Time</h4>
+                            <p className="mt-1 text-lg text-gray-900">{trade.exitTime}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Financial Results */}
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2">
+                        Financial Results
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500">P&L</h4>
+                          <p className={`mt-1 text-lg font-semibold ${
+                            trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {formatCurrency(trade.pnl)}
+                          </p>
+                        </div>
+                        {trade.riskAmount && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">Risk Amount</h4>
+                            <p className="mt-1 text-lg text-gray-900">{formatCurrency(trade.riskAmount)}</p>
+                          </div>
+                        )}
+                        {trade.rewardAmount && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">Reward Amount</h4>
+                            <p className="mt-1 text-lg text-gray-900">{formatCurrency(trade.rewardAmount)}</p>
+                          </div>
+                        )}
+                        {trade.riskRewardRatio && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">Risk:Reward Ratio</h4>
+                            <p className="mt-1 text-lg text-gray-900">{trade.riskRewardRatio}</p>
+                          </div>
+                        )}
+                        {trade.commission && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">Commission</h4>
+                            <p className="mt-1 text-lg text-gray-900">{formatCurrency(trade.commission)}</p>
+                          </div>
+                        )}
+                        {trade.swap && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">Swap</h4>
+                            <p className="mt-1 text-lg text-gray-900">{formatCurrency(trade.swap)}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Performance Metrics */}
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2">
+                        Performance Metrics
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500">Execution Score</h4>
+                          <p className="mt-1 text-lg text-gray-900">{trade.executionScore}/10</p>
+                        </div>
+                        {trade.pips && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">Pips</h4>
+                            <p className="mt-1 text-lg text-gray-900">{trade.pips}</p>
+                          </div>
+                        )}
+                        {trade.holdingTime && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">Holding Time</h4>
+                            <p className="mt-1 text-lg text-gray-900">{trade.holdingTime}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Market Analysis */}
+                    {(trade.marketConditions || trade.reasonForTrade || trade.setupType) && (
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">Emotions</h3>
-                        <p className="mt-1 text-gray-900">{trade.emotions}</p>
+                        <h3 className="text-lg font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2">
+                          Market Analysis
+                        </h3>
+                        <div className="space-y-4">
+                          {trade.reasonForTrade && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500">Reason for Trade</h4>
+                              <p className="mt-1 text-gray-900 bg-gray-50 p-3 rounded-lg">{trade.reasonForTrade}</p>
+                            </div>
+                          )}
+                          {trade.marketConditions && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500">Market Conditions</h4>
+                              <p className="mt-1 text-gray-900 bg-gray-50 p-3 rounded-lg">{trade.marketConditions}</p>
+                            </div>
+                          )}
+                          {trade.setupType && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500">Setup Type</h4>
+                              <p className="mt-1 text-gray-900">{trade.setupType}</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
 
-                    {trade.notes && (
+                    {/* Trade Review */}
+                    {(trade.whatWentWell || trade.whatCouldBeBetter || trade.lessonsLearned || trade.emotions || trade.notes) && (
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">Notes</h3>
-                        <p className="mt-1 text-gray-900">{trade.notes}</p>
+                        <h3 className="text-lg font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2">
+                          Trade Review
+                        </h3>
+                        <div className="space-y-4">
+                          {trade.whatWentWell && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500">What Went Well</h4>
+                              <p className="mt-1 text-gray-900 bg-green-50 p-3 rounded-lg border border-green-200">{trade.whatWentWell}</p>
+                            </div>
+                          )}
+                          {trade.whatCouldBeBetter && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500">What Could Be Better</h4>
+                              <p className="mt-1 text-gray-900 bg-yellow-50 p-3 rounded-lg border border-yellow-200">{trade.whatCouldBeBetter}</p>
+                            </div>
+                          )}
+                          {trade.lessonsLearned && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500">Lessons Learned</h4>
+                              <p className="mt-1 text-gray-900 bg-blue-50 p-3 rounded-lg border border-blue-200">{trade.lessonsLearned}</p>
+                            </div>
+                          )}
+                          {trade.emotions && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500">Emotions</h4>
+                              <p className="mt-1 text-gray-900 bg-purple-50 p-3 rounded-lg border border-purple-200">{trade.emotions}</p>
+                            </div>
+                          )}
+                          {trade.notes && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500">Additional Notes</h4>
+                              <p className="mt-1 text-gray-900 bg-gray-50 p-3 rounded-lg">{trade.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Additional Information */}
+                    {(trade.brokerAccount || trade.platform || trade.tags) && (
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2">
+                          Additional Information
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          {trade.brokerAccount && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500">Broker Account</h4>
+                              <p className="mt-1 text-lg text-gray-900">{trade.brokerAccount}</p>
+                            </div>
+                          )}
+                          {trade.platform && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500">Platform</h4>
+                              <p className="mt-1 text-lg text-gray-900">{trade.platform}</p>
+                            </div>
+                          )}
+                          {trade.tags && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500">Tags</h4>
+                              <div className="mt-1 flex flex-wrap gap-2">
+                                {trade.tags.split(',').map((tag, index) => (
+                                  <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    {tag.trim()}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

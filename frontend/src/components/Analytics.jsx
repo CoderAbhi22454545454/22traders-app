@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
-import { analyticsAPI, formatCurrency, formatDate } from '../utils/api';
+import { tradesAPI, formatCurrency } from '../utils/api';
 import {
   ChartBarIcon,
   FunnelIcon,
@@ -18,113 +18,572 @@ import {
 
 const Analytics = ({ userId }) => {
   const [analyticsData, setAnalyticsData] = useState(null);
-  const [advancedData, setAdvancedData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
-    dateRange: '30d',
+    dateRange: 'all',
     strategy: 'all',
     instrument: 'all',
     session: 'all'
   });
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Client-side data storage
+  const [allTrades, setAllTrades] = useState([]);
+  const [filteredTrades, setFilteredTrades] = useState([]);
+
+  // Fetch all trades once on component mount
   useEffect(() => {
     if (userId) {
-      fetchAnalyticsData();
+      fetchAllTrades();
     }
-  }, [userId, filters]);
+  }, [userId]);
 
-  const fetchAnalyticsData = async () => {
+  // Apply filters when filter parameters change
+  useEffect(() => {
+    console.log('🔄 Analytics filters changed:', filters);
+    if (allTrades.length > 0) {
+      applyFiltersAndCalculateAnalytics();
+    }
+  }, [filters, allTrades]);
+
+  // Fetch all trades once (no filtering parameters)
+  const fetchAllTrades = async () => {
+    console.log('📊 Fetching all trades for analytics...');
     setLoading(true);
     setError(null);
     
     try {
-      // Fetch basic analytics data
-      const basicAnalytics = await analyticsAPI.getAnalytics(userId, filters);
+      // Fetch all trades without any filtering
+      const tradesData = await tradesAPI.getAllTrades({
+        userId,
+        page: 1,
+        limit: 1000 // Get a large number of trades
+      });
       
-      // Fetch advanced analytics data
-      const advancedAnalytics = await analyticsAPI.getAdvancedAnalytics(userId, filters);
+      console.log('📋 All trades fetched for analytics:', {
+        tradesCount: tradesData?.trades?.length,
+        firstTrade: tradesData?.trades?.[0],
+        lastTrade: tradesData?.trades?.[tradesData?.trades?.length - 1]
+      });
       
-      // Transform data for charts
-      const transformedData = transformAnalyticsData(basicAnalytics, advancedAnalytics);
+      setAllTrades(tradesData.trades || []);
       
-      setAnalyticsData(transformedData);
-      setAdvancedData(advancedAnalytics);
     } catch (error) {
-      console.error('Error fetching analytics:', error);
-      setError(error.message || 'Failed to fetch analytics data');
+      console.error('❌ Error fetching trades for analytics:', error);
+      setError(error.message || 'Failed to fetch trades data');
     } finally {
       setLoading(false);
     }
   };
 
-  const transformAnalyticsData = (basicData, advancedData) => {
-    const { overview, strategies, sessions, instruments, monthlyData } = basicData;
+  // Apply filters and calculate analytics
+  const applyFiltersAndCalculateAnalytics = () => {
+    console.log('🔍 Applying filters and calculating analytics:', {
+      filters,
+      totalTrades: allTrades.length
+    });
+
+    if (allTrades.length === 0) {
+      console.log('⚠️ No trades to analyze');
+      setAnalyticsData(null);
+      return;
+    }
+
+    // Apply filters to trades
+    let filtered = [...allTrades];
+
+    // Date range filter
+    if (filters.dateRange !== 'all') {
+      const dateRange = getDateRange(filters.dateRange);
+      if (dateRange) {
+        filtered = filtered.filter(trade => {
+          const tradeDate = new Date(trade.date);
+          return tradeDate >= dateRange.startDate && tradeDate <= dateRange.endDate;
+        });
+      }
+    }
+
+    // Strategy filter
+    if (filters.strategy !== 'all') {
+      filtered = filtered.filter(trade => 
+        trade.strategy && trade.strategy.toLowerCase() === filters.strategy.toLowerCase()
+      );
+    }
+
+    // Instrument filter
+    if (filters.instrument !== 'all') {
+      filtered = filtered.filter(trade => 
+        trade.instrument && trade.instrument.toLowerCase() === filters.instrument.toLowerCase()
+      );
+    }
+
+    // Session filter
+    if (filters.session !== 'all') {
+      filtered = filtered.filter(trade => 
+        trade.session && trade.session.toLowerCase() === filters.session.toLowerCase()
+      );
+    }
+
+    console.log('✅ Filtered trades for analytics:', {
+      originalCount: allTrades.length,
+      filteredCount: filtered.length,
+      filters
+    });
+
+    setFilteredTrades(filtered);
     
-    // Transform monthly data
-    const monthlyPnL = monthlyData.map(item => ({
-      month: new Date(item.month).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-      pnl: item.pnl
-    }));
+    // Calculate analytics from filtered trades
+    const analyticsData = calculateAnalytics(filtered);
+    setAnalyticsData(analyticsData);
+  };
+
+  // Get date range based on filter
+  const getDateRange = (dateRange) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    // Transform strategy data for pie chart
-    const strategyBreakdown = strategies.map(strategy => ({
-      name: strategy.name || 'Unknown',
-      count: strategy.trades,
-      pnl: strategy.totalPnL
-    }));
+    let startDate = new Date(today);
     
-    // Transform session data
-    const sessionData = sessions.map(session => ({
-      session: session.name || 'Unknown',
-      pnl: session.totalPnL,
-      trades: session.trades
-    }));
-    
-    // Transform strategy win rates
-    const strategyWinRates = strategies.map(strategy => ({
-      strategy: strategy.name || 'Unknown',
-      winRate: parseFloat(strategy.winRate) || 0
-    }));
-    
-    // Transform instrument data
-    const instrumentData = instruments.map(instrument => ({
-      instrument: instrument.name || 'Unknown',
-      totalPnL: instrument.totalPnL,
-      trades: instrument.trades
-    }));
+    switch (dateRange) {
+      case '7d':
+        startDate.setDate(today.getDate() - 7);
+        break;
+      case '30d':
+        startDate.setDate(today.getDate() - 30);
+        break;
+      case '90d':
+        startDate.setDate(today.getDate() - 90);
+        break;
+      case '1y':
+        startDate.setFullYear(today.getFullYear() - 1);
+        break;
+      default:
+        return null;
+    }
     
     return {
-      totalTrades: overview.totalTrades || 0,
-      winRate: overview.winRate || 0,
-      totalPnL: overview.totalPnL || 0,
-      avgScore: overview.avgExecutionScore || 0,
-      dailyPnL: advancedData.dailyPnL || [],
+      startDate,
+      endDate: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1) // End of today
+    };
+  };
+
+  // Calculate comprehensive analytics from trades
+  const calculateAnalytics = (trades) => {
+    console.log('📊 Calculating analytics for', trades.length, 'trades');
+    
+    if (trades.length === 0) {
+      return getEmptyAnalyticsData();
+    }
+
+    // Basic metrics
+    const totalTrades = trades.length;
+    const winningTrades = trades.filter(trade => trade.result === 'win').length;
+    const losingTrades = trades.filter(trade => trade.result === 'loss').length;
+    const winRate = Math.round((winningTrades / totalTrades) * 100);
+    const totalPnL = trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
+    const avgScore = trades.reduce((sum, trade) => sum + (trade.executionScore || 0), 0) / totalTrades;
+
+    // Calculate daily P&L
+    const dailyPnL = calculateDailyPnL(trades);
+    
+    // Calculate strategy breakdown
+    const strategyBreakdown = calculateStrategyBreakdown(trades);
+    
+    // Calculate session data
+    const sessionData = calculateSessionData(trades);
+    
+    // Calculate strategy win rates
+    const strategyWinRates = calculateStrategyWinRates(trades);
+    
+    // Calculate monthly data
+    const monthlyData = calculateMonthlyData(trades);
+    
+    // Calculate instrument data
+    const instrumentData = calculateInstrumentData(trades);
+    
+    // Calculate day of week data
+    const dayOfWeekData = calculateDayOfWeekData(trades);
+    
+    // Calculate risk metrics
+    const riskMetrics = calculateRiskMetrics(trades);
+    
+    // Calculate execution scores
+    const executionScores = calculateExecutionScores(trades);
+    
+    // Calculate P&L distribution
+    const pnlDistribution = calculatePnLDistribution(trades);
+    
+    // Find best/worst performers
+    const bestWorstMetrics = calculateBestWorstMetrics(trades);
+
+    const analyticsData = {
+      totalTrades,
+      winRate,
+      totalPnL,
+      avgScore,
+      dailyPnL,
       strategyBreakdown,
       sessionData,
       strategyWinRates,
-      monthlyData: monthlyPnL,
+      monthlyData,
       instrumentData,
-      riskRewardData: advancedData.riskRewardData || [],
-      executionScores: advancedData.executionScores || [],
-      dayOfWeekData: advancedData.dayOfWeekData || [],
-      maxDrawdown: advancedData.maxDrawdown || 0,
-      sharpeRatio: advancedData.sharpeRatio || 0,
-      profitFactor: advancedData.profitFactor || 0,
-      recoveryFactor: advancedData.recoveryFactor || 0,
-      drawdownData: advancedData.drawdownData || [],
-      pnlDistribution: advancedData.pnlDistribution || [],
-      bestDay: overview.bestDay || 0,
-      worstDay: overview.worstDay || 0,
-      bestStrategy: overview.bestStrategy || 'N/A',
-      worstStrategy: overview.worstStrategy || 'N/A',
-      bestInstrument: overview.bestInstrument || 'N/A',
-      worstInstrument: overview.worstInstrument || 'N/A',
-      maxWinStreak: overview.maxWinStreak || 0,
-      maxLossStreak: overview.maxLossStreak || 0
+      dayOfWeekData,
+      riskRewardData: [], // Can be calculated if risk/reward data is available
+      executionScores,
+      pnlDistribution,
+      drawdownData: riskMetrics.drawdownData,
+      maxDrawdown: riskMetrics.maxDrawdown,
+      sharpeRatio: riskMetrics.sharpeRatio,
+      profitFactor: riskMetrics.profitFactor,
+      recoveryFactor: riskMetrics.recoveryFactor,
+      ...bestWorstMetrics
+    };
+
+    console.log('📊 Analytics calculated:', analyticsData);
+    return analyticsData;
+  };
+
+  // Helper functions for analytics calculations
+  const getEmptyAnalyticsData = () => ({
+    totalTrades: 0,
+    winRate: 0,
+    totalPnL: 0,
+    avgScore: 0,
+    dailyPnL: [],
+    strategyBreakdown: [],
+    sessionData: [],
+    strategyWinRates: [],
+    monthlyData: [],
+    instrumentData: [],
+    dayOfWeekData: [],
+    riskRewardData: [],
+    executionScores: [],
+    pnlDistribution: [],
+    drawdownData: [],
+    maxDrawdown: 0,
+    sharpeRatio: 0,
+    profitFactor: 0,
+    recoveryFactor: 0,
+    bestDay: 0,
+    worstDay: 0,
+    bestStrategy: 'N/A',
+    worstStrategy: 'N/A',
+    bestInstrument: 'N/A',
+    worstInstrument: 'N/A',
+    maxWinStreak: 0,
+    maxLossStreak: 0
+  });
+
+  const calculateDailyPnL = (trades) => {
+    const dailyPnL = {};
+    
+    trades.forEach(trade => {
+      const dateKey = new Date(trade.date).toISOString().split('T')[0];
+      if (!dailyPnL[dateKey]) {
+        dailyPnL[dateKey] = 0;
+      }
+      dailyPnL[dateKey] += trade.pnl || 0;
+    });
+    
+    return Object.entries(dailyPnL)
+      .sort(([a], [b]) => new Date(a) - new Date(b))
+      .map(([date, pnl]) => ({
+        date: new Date(date).toLocaleDateString(),
+        pnl
+      }));
+  };
+
+  const calculateStrategyBreakdown = (trades) => {
+    const strategies = {};
+    
+    trades.forEach(trade => {
+      const strategy = trade.strategy || 'Unknown';
+      if (!strategies[strategy]) {
+        strategies[strategy] = { count: 0, pnl: 0 };
+      }
+      strategies[strategy].count++;
+      strategies[strategy].pnl += trade.pnl || 0;
+    });
+    
+    return Object.entries(strategies).map(([name, data]) => ({
+      name,
+      count: data.count,
+      pnl: data.pnl
+    }));
+  };
+
+  const calculateSessionData = (trades) => {
+    const sessions = {};
+    
+    trades.forEach(trade => {
+      const session = trade.session || 'Unknown';
+      if (!sessions[session]) {
+        sessions[session] = { trades: 0, pnl: 0 };
+      }
+      sessions[session].trades++;
+      sessions[session].pnl += trade.pnl || 0;
+    });
+    
+    return Object.entries(sessions).map(([session, data]) => ({
+      session,
+      trades: data.trades,
+      pnl: data.pnl
+    }));
+  };
+
+  const calculateStrategyWinRates = (trades) => {
+    const strategies = {};
+    
+    trades.forEach(trade => {
+      const strategy = trade.strategy || 'Unknown';
+      if (!strategies[strategy]) {
+        strategies[strategy] = { total: 0, wins: 0 };
+      }
+      strategies[strategy].total++;
+      if (trade.result === 'win') {
+        strategies[strategy].wins++;
+      }
+    });
+    
+    return Object.entries(strategies).map(([strategy, data]) => ({
+      strategy,
+      winRate: Math.round((data.wins / data.total) * 100)
+    }));
+  };
+
+  const calculateMonthlyData = (trades) => {
+    const monthly = {};
+    
+    trades.forEach(trade => {
+      const date = new Date(trade.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!monthly[monthKey]) {
+        monthly[monthKey] = 0;
+      }
+      monthly[monthKey] += trade.pnl || 0;
+    });
+    
+    return Object.entries(monthly)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, pnl]) => ({
+        month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        pnl
+      }));
+  };
+
+  const calculateInstrumentData = (trades) => {
+    const instruments = {};
+    
+    trades.forEach(trade => {
+      const instrument = trade.instrument || 'Unknown';
+      if (!instruments[instrument]) {
+        instruments[instrument] = { trades: 0, totalPnL: 0 };
+      }
+      instruments[instrument].trades++;
+      instruments[instrument].totalPnL += trade.pnl || 0;
+    });
+    
+    return Object.entries(instruments).map(([instrument, data]) => ({
+      instrument,
+      trades: data.trades,
+      totalPnL: data.totalPnL
+    }));
+  };
+
+  const calculateDayOfWeekData = (trades) => {
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayData = {};
+    
+    trades.forEach(trade => {
+      const dayOfWeek = new Date(trade.date).getDay();
+      const dayName = dayNames[dayOfWeek];
+      
+      if (!dayData[dayName]) {
+        dayData[dayName] = { trades: 0, pnl: 0 };
+      }
+      dayData[dayName].trades++;
+      dayData[dayName].pnl += trade.pnl || 0;
+    });
+    
+    return dayNames.map(day => ({
+      day,
+      trades: dayData[day]?.trades || 0,
+      avgPnL: dayData[day]?.trades ? dayData[day].pnl / dayData[day].trades : 0
+    })).filter(day => day.trades > 0);
+  };
+
+  const calculateRiskMetrics = (trades) => {
+    const pnlValues = trades.map(trade => trade.pnl || 0);
+    const cumulativePnL = [];
+    let runningTotal = 0;
+    
+    pnlValues.forEach((pnl, index) => {
+      runningTotal += pnl;
+      cumulativePnL.push({
+        date: new Date(trades[index].date).toLocaleDateString(),
+        cumulative: runningTotal
+      });
+    });
+    
+    // Calculate drawdown
+    const drawdownData = [];
+    let peak = 0;
+    let maxDrawdown = 0;
+    
+    cumulativePnL.forEach(point => {
+      if (point.cumulative > peak) {
+        peak = point.cumulative;
+      }
+      const drawdown = point.cumulative - peak;
+      drawdownData.push({
+        date: point.date,
+        drawdown
+      });
+      if (drawdown < maxDrawdown) {
+        maxDrawdown = drawdown;
+      }
+    });
+    
+    // Calculate Sharpe ratio (simplified)
+    const avgReturn = pnlValues.reduce((sum, pnl) => sum + pnl, 0) / pnlValues.length;
+    const variance = pnlValues.reduce((sum, pnl) => sum + Math.pow(pnl - avgReturn, 2), 0) / pnlValues.length;
+    const sharpeRatio = variance > 0 ? avgReturn / Math.sqrt(variance) : 0;
+    
+    // Calculate profit factor
+    const grossProfit = pnlValues.filter(pnl => pnl > 0).reduce((sum, pnl) => sum + pnl, 0);
+    const grossLoss = Math.abs(pnlValues.filter(pnl => pnl < 0).reduce((sum, pnl) => sum + pnl, 0));
+    const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : 0;
+    
+    // Calculate recovery factor
+    const totalPnL = pnlValues.reduce((sum, pnl) => sum + pnl, 0);
+    const recoveryFactor = maxDrawdown < 0 ? totalPnL / Math.abs(maxDrawdown) : 0;
+    
+    return {
+      drawdownData,
+      maxDrawdown,
+      sharpeRatio,
+      profitFactor,
+      recoveryFactor
     };
   };
+
+  const calculateExecutionScores = (trades) => {
+    const categories = ['Entry', 'Exit', 'Risk Management', 'Discipline', 'Analysis'];
+    
+    if (trades.length === 0) {
+      return categories.map(category => ({
+        category,
+        score: 0
+      }));
+    }
+    
+    // For now, we'll use the overall execution score for all categories
+    // In a real implementation, you might have separate scores for each category
+    const avgScore = trades.reduce((sum, trade) => sum + (trade.executionScore || 0), 0) / trades.length;
+    
+    return categories.map(category => ({
+      category,
+      score: avgScore
+    }));
+  };
+
+  const calculatePnLDistribution = (trades) => {
+    const ranges = [
+      { range: '-200 to -100', min: -200, max: -100 },
+      { range: '-100 to 0', min: -100, max: 0 },
+      { range: '0 to 100', min: 0, max: 100 },
+      { range: '100 to 200', min: 100, max: 200 },
+      { range: '200+', min: 200, max: Infinity }
+    ];
+    
+    return ranges.map(range => ({
+      range: range.range,
+      count: trades.filter(trade => {
+        const pnl = trade.pnl || 0;
+        return pnl >= range.min && pnl < range.max;
+      }).length
+    }));
+  };
+
+  const calculateBestWorstMetrics = (trades) => {
+    const dailyPnL = {};
+    
+    trades.forEach(trade => {
+      const dateKey = new Date(trade.date).toDateString();
+      if (!dailyPnL[dateKey]) {
+        dailyPnL[dateKey] = 0;
+      }
+      dailyPnL[dateKey] += trade.pnl || 0;
+    });
+    
+    const dailyValues = Object.values(dailyPnL);
+    const bestDay = Math.max(...dailyValues, 0);
+    const worstDay = Math.min(...dailyValues, 0);
+    
+    // Calculate win/loss streaks
+    let maxWinStreak = 0;
+    let maxLossStreak = 0;
+    let currentWinStreak = 0;
+    let currentLossStreak = 0;
+    
+    trades.forEach(trade => {
+      if (trade.result === 'win') {
+        currentWinStreak++;
+        currentLossStreak = 0;
+        maxWinStreak = Math.max(maxWinStreak, currentWinStreak);
+      } else if (trade.result === 'loss') {
+        currentLossStreak++;
+        currentWinStreak = 0;
+        maxLossStreak = Math.max(maxLossStreak, currentLossStreak);
+      }
+    });
+    
+    // Find best/worst strategy and instrument
+    const strategyPnL = {};
+    const instrumentPnL = {};
+    
+    trades.forEach(trade => {
+      const strategy = trade.strategy || 'Unknown';
+      const instrument = trade.instrument || 'Unknown';
+      
+      if (!strategyPnL[strategy]) strategyPnL[strategy] = 0;
+      if (!instrumentPnL[instrument]) instrumentPnL[instrument] = 0;
+      
+      strategyPnL[strategy] += trade.pnl || 0;
+      instrumentPnL[instrument] += trade.pnl || 0;
+    });
+    
+    const bestStrategy = Object.keys(strategyPnL).reduce((best, strategy) => 
+      strategyPnL[strategy] > (strategyPnL[best] || -Infinity) ? strategy : best
+    , 'N/A');
+    
+    const worstStrategy = Object.keys(strategyPnL).reduce((worst, strategy) => 
+      strategyPnL[strategy] < (strategyPnL[worst] || Infinity) ? strategy : worst
+    , 'N/A');
+    
+    const bestInstrument = Object.keys(instrumentPnL).reduce((best, instrument) => 
+      instrumentPnL[instrument] > (instrumentPnL[best] || -Infinity) ? instrument : best
+    , 'N/A');
+    
+    const worstInstrument = Object.keys(instrumentPnL).reduce((worst, instrument) => 
+      instrumentPnL[instrument] < (instrumentPnL[worst] || Infinity) ? instrument : worst
+    , 'N/A');
+    
+    return {
+      bestDay,
+      worstDay,
+      maxWinStreak,
+      maxLossStreak,
+      bestStrategy,
+      worstStrategy,
+      bestInstrument,
+      worstInstrument
+    };
+  };
+
+
 
   const exportData = () => {
     if (!analyticsData) return;
@@ -134,13 +593,17 @@ const Analytics = ({ userId }) => {
       `Total Trades,${analyticsData.totalTrades}\n` +
       `Win Rate,${analyticsData.winRate}%\n` +
       `Total P&L,${analyticsData.totalPnL}\n` +
-      `Average Score,${analyticsData.avgScore}\n` +
+      `Average Score,${analyticsData.avgScore.toFixed(2)}\n` +
       `Best Day,${analyticsData.bestDay}\n` +
       `Worst Day,${analyticsData.worstDay}\n` +
       `Max Drawdown,${analyticsData.maxDrawdown}\n` +
-      `Sharpe Ratio,${analyticsData.sharpeRatio}\n` +
-      `Profit Factor,${analyticsData.profitFactor}\n` +
-      `Recovery Factor,${analyticsData.recoveryFactor}`;
+      `Sharpe Ratio,${analyticsData.sharpeRatio.toFixed(2)}\n` +
+      `Profit Factor,${analyticsData.profitFactor.toFixed(2)}\n` +
+      `Recovery Factor,${analyticsData.recoveryFactor.toFixed(2)}\n` +
+      `Max Win Streak,${analyticsData.maxWinStreak}\n` +
+      `Max Loss Streak,${analyticsData.maxLossStreak}\n` +
+      `Best Strategy,${analyticsData.bestStrategy}\n` +
+      `Best Instrument,${analyticsData.bestInstrument}`;
     
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -183,7 +646,7 @@ const Analytics = ({ userId }) => {
           <div className="text-lg text-gray-800 mb-2">Error Loading Analytics</div>
           <div className="text-sm text-gray-600 mb-4">{error}</div>
           <button
-            onClick={fetchAnalyticsData}
+            onClick={fetchAllTrades}
             className="btn-primary"
           >
             Try Again
@@ -228,11 +691,11 @@ const Analytics = ({ userId }) => {
                 onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value }))}
                 className="form-input py-2 text-sm"
               >
+                <option value="all">All time</option>
                 <option value="7d">Last 7 days</option>
                 <option value="30d">Last 30 days</option>
                 <option value="90d">Last 90 days</option>
                 <option value="1y">Last year</option>
-                <option value="all">All time</option>
               </select>
 
               <select
