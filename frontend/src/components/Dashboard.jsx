@@ -878,11 +878,11 @@ const Dashboard = ({ userId }) => {
 
               {/* Trading Calendar */}
               <div className="bg-white shadow-sm rounded-xl border border-gray-200 w-full">
-                <div className="px-6 py-4 border-b border-gray-200">
+                {/* <div className="px-6 py-4 border-b border-gray-200">
                   <h2 className="text-lg font-semibold text-gray-900">Trading Calendar</h2>
                   <p className="text-sm text-gray-600">Click on any date to add a trade</p>
-                </div>
-                <div className="p-6 calendar-container">
+                </div> */}
+                <div className=" calendar-container">
                   <CalendarView onDateClick={handleDateClick} selectedDate={selectedDate} userId={userId} />
                 </div>
               </div>
