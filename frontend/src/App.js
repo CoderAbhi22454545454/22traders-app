@@ -7,6 +7,8 @@ import TradeDetail from './components/TradeDetail';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import PWAInstall from './components/PWAInstall';
+import PWAUpdate from './components/PWAUpdate';
+import PWAStatus from './components/PWAStatus';
 import { NotificationProvider } from './components/Notifications';
 import { 
   HomeIcon, 
@@ -61,7 +63,10 @@ const Navigation = ({ user, onLogout }) => {
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-4">
+            {/* PWA Status */}
+            <PWAStatus userId={user.id} />
+            
             {/* User Menu */}
             <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-2">
@@ -213,8 +218,9 @@ function App() {
             </Routes>
           </main>
           
-          {/* PWA Install Component */}
+          {/* PWA Components */}
           <PWAInstall />
+          <PWAUpdate />
           
           {/* Footer */}
           <footer className="bg-white border-t border-gray-200 py-4">

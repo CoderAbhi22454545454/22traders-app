@@ -3,6 +3,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, PhotoIcon, CheckIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { tradesAPI, formatCurrency, formatDate } from '../utils/api';
 import { useNotifications } from './Notifications';
+import InstrumentIcon from './shared/InstrumentIcon';
 
 // Predefined emotion options
 const EMOTION_OPTIONS = [
@@ -366,7 +367,9 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
                             className="bg-white rounded-lg p-3 border border-gray-200 hover:shadow-sm transition-shadow"
                           >
                             <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium text-gray-900">{trade.tradePair || trade.instrument}</span>
+                              <span className="font-medium text-gray-900">
+                                <InstrumentIcon instrument={trade.tradePair || trade.instrument} />
+                              </span>
                               <span className={`text-xs px-2 py-1 rounded-full ${getResultColor(trade.tradeOutcome || trade.result)}`}>
                                 {(trade.tradeOutcome || trade.result)?.toUpperCase()}
                               </span>

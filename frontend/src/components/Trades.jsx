@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { tradesAPI, formatCurrency } from '../utils/api';
+import InstrumentIcon from './shared/InstrumentIcon';
 import {
   ChartBarIcon,
   CalendarDaysIcon,
@@ -323,7 +324,9 @@ const Trades = ({ userId }) => {
               )}
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">{trade.instrument}</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                <InstrumentIcon instrument={trade.instrument} />
+              </h3>
               <p className="text-sm text-gray-500">
                 {new Date(trade.date).toLocaleDateString()}
               </p>

@@ -8,6 +8,8 @@ import CalendarView from './CalendarView';
 import TradeModal from './TradeModal';
 import TradeScreenshot from './TradeScreenshot';
 import { tradesAPI, formatCurrency } from '../utils/api';
+import bitcoinIcon from '../assets/bitcoin.png';
+import goldIcon from '../assets/gold.png';
 import { 
   ChartBarIcon, 
   ArrowTrendingUpIcon, 
@@ -23,6 +25,27 @@ import {
   FunnelIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
+
+// Helper component for instrument icons
+const InstrumentIcon = ({ instrument }) => {
+  const getIcon = () => {
+    const normalizedInstrument = instrument.toLowerCase();
+    if (normalizedInstrument.includes('btc') || normalizedInstrument.includes('bitcoin')) {
+      return <img src={bitcoinIcon} alt="Bitcoin" className="w-5 h-5 inline-block mr-1" />;
+    }
+    if (normalizedInstrument.includes('gold') || normalizedInstrument.includes('xau')) {
+      return <img src={goldIcon} alt="Gold" className="w-5 h-5 inline-block mr-1" />;
+    }
+    return null;
+  };
+
+  return (
+    <span className="flex items-center">
+      {getIcon()}
+      {instrument}
+    </span>
+  );
+};
 
 const Dashboard = ({ userId }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -394,30 +417,27 @@ const Dashboard = ({ userId }) => {
     return timeRangeOptions.find(opt => opt.value === timeRange)?.label || 'All Time';
   };
 
-  const StatCard = ({ title, value, color = 'primary', subtitle = null, icon: Icon, trend = null }) => {
+  const StatCard = ({ title, value, color = 'default', subtitle = null, icon: Icon, trend = null, isInstrument = false }) => {
     const getColorClasses = (color) => {
       const colors = {
-        primary: 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 text-blue-900',
-        success: 'bg-gradient-to-br from-green-50 to-green-100 border-green-200 text-green-900',
-        danger: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 text-red-900',
-        warning: 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 text-yellow-900',
-        purple: 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 text-purple-900'
+        default: 'bg-white border-gray-200',
+        success: 'bg-white border-green-200',
+        danger: 'bg-white border-red-200'
       };
-      return colors[color] || colors.primary;
+      return colors[color] || colors.default;
     };
 
     return (
-      <div className={`stat-card ${getColorClasses(color)} group cursor-pointer transform hover:scale-105`}>
+      <div className={`stat-card ${getColorClasses(color)} border rounded-lg p-4 hover:shadow-sm transition-shadow`}>
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-gray-600 mb-1 truncate">{title}</p>
-              {Icon && <Icon className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />}
-            </div>
-            <p className="text-xl font-bold text-gray-900 truncate">{value}</p>
+            <p className="text-xs font-medium text-gray-600 mb-1">{title}</p>
+            <p className="text-lg font-bold text-gray-900">
+              {isInstrument ? <InstrumentIcon instrument={value} /> : value}
+            </p>
             {subtitle && (
               <div className="flex items-center mt-1">
-                <p className="text-xs text-gray-500 truncate">{subtitle}</p>
+                <p className="text-xs text-gray-500">{subtitle}</p>
                 {trend && (
                   <span className={`ml-2 flex items-center text-xs ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {trend > 0 ? <ArrowUpIcon className="h-3 w-3" /> : <ArrowDownIcon className="h-3 w-3" />}
@@ -427,6 +447,7 @@ const Dashboard = ({ userId }) => {
               </div>
             )}
           </div>
+          {Icon && <Icon className="h-5 w-5 text-gray-400" />}
         </div>
       </div>
     );
@@ -561,157 +582,89 @@ const Dashboard = ({ userId }) => {
   }
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Enhanced Header */}
-      <header className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'} shadow-sm border-b`}>
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50">
+      {/* Simplified Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Trading Dashboard
-              </h1>
-              <p className={`mt-1 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                Track your trading performance and analyze your strategies
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              {/* Enhanced Filter Controls */}
-              <div className="flex items-center space-x-2">
-                {/* Quick Time Range Selector (only show in preset mode) */}
-                {filterMode === 'preset' && (
-                  <div className="relative">
-                    <select
-                      value={timeRange}
-                      onChange={(e) => {
-                        console.log('⏰ Time range changed from', timeRange, 'to', e.target.value);
-                        setTimeRange(e.target.value);
-                      }}
-                      className={`form-input py-2 px-3 pr-8 text-sm rounded-lg border ${
-                        darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                      } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                    >
-                      {timeRangeOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Advanced Filters Button */}
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={`flex items-center px-3 py-2 text-sm rounded-lg border transition-colors ${
-                    darkMode ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                  } ${showFilters ? 'ring-2 ring-blue-500' : ''}`}
-                >
-                  <FunnelIcon className="h-4 w-4 mr-2" />
-                  Filters
-                  {(filterMode === 'custom' || showFilters) && (
-                    <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {filterMode === 'custom' ? 'Custom' : 'Active'}
-                    </span>
-                  )}
-                </button>
-              </div>
-              
-              {/* Dark Mode Toggle */}
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                className={`p-2 rounded-lg transition-colors ${
-                  darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
-                }`}
+            <h1 className="text-2xl font-bold text-gray-900">Trading Dashboard</h1>
+            <div className="flex items-center space-x-3">
+              <select
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value)}
+                className="form-input py-1.5 px-3 text-sm rounded border border-gray-300"
               >
-                {darkMode ? '🌞' : '🌙'}
+                {timeRangeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center px-3 py-1.5 text-sm rounded border border-gray-300 bg-white"
+              >
+                <FunnelIcon className="h-4 w-4 mr-1" />
+                Filters
               </button>
               
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="btn-primary"
+                className="btn-primary py-1.5"
               >
-                <PlusIcon className="h-4 w-4 mr-2" />
+                <PlusIcon className="h-4 w-4 mr-1" />
                 Add Trade
               </button>
             </div>
           </div>
           
-          {/* Advanced Filters Panel */}
+          {/* Filter Panel */}
           {showFilters && (
-            <div className={`mt-4 p-4 rounded-lg border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Date Filters
-                </h3>
-                <button
-                  onClick={() => setShowFilters(false)}
-                  className={`p-1 rounded-md hover:bg-gray-200 ${darkMode ? 'hover:bg-gray-700' : ''}`}
-                >
-                  <XMarkIcon className="h-5 w-5" />
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Filter Mode Toggle */}
+            <div className="mt-4 p-4 rounded border border-gray-200 bg-white">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Filter Type
-                  </label>
                   <select
                     value={tempFilters.mode}
                     onChange={(e) => setTempFilters({...tempFilters, mode: e.target.value})}
-                    className={`form-input w-full py-2 px-3 text-sm rounded-lg border ${
-                      darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                    } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                    className="form-input w-full py-1.5 px-3 text-sm rounded border border-gray-300"
                   >
                     <option value="preset">Quick Ranges</option>
                     <option value="custom">Custom Date Range</option>
                   </select>
                 </div>
 
-                {/* Custom Date Range Fields */}
                 {tempFilters.mode === 'custom' && (
                   <>
                     <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Start Date
-                      </label>
                       <input
                         type="date"
                         value={tempFilters.startDate}
                         onChange={(e) => setTempFilters({...tempFilters, startDate: e.target.value})}
-                        className={`form-input w-full py-2 px-3 text-sm rounded-lg border ${
-                          darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                        } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                        className="form-input w-full py-1.5 px-3 text-sm rounded border border-gray-300"
                       />
                     </div>
                     <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        End Date
-                      </label>
                       <input
                         type="date"
                         value={tempFilters.endDate}
                         onChange={(e) => setTempFilters({...tempFilters, endDate: e.target.value})}
-                        className={`form-input w-full py-2 px-3 text-sm rounded-lg border ${
-                          darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                        } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                        className="form-input w-full py-1.5 px-3 text-sm rounded border border-gray-300"
                       />
                     </div>
                   </>
                 )}
 
-                {/* Action Buttons */}
-                <div className="flex items-end space-x-2">
+                <div className="flex items-center space-x-2">
                   <button
                     onClick={applyFilters}
-                    className="btn-primary text-sm px-4 py-2"
+                    className="btn-primary text-sm px-4 py-1.5"
                   >
-                    Apply Filters
+                    Apply
                   </button>
                   <button
                     onClick={resetFilters}
-                    className="btn-secondary text-sm px-4 py-2"
+                    className="btn-secondary text-sm px-4 py-1.5"
                   >
                     Reset
                   </button>
@@ -720,332 +673,200 @@ const Dashboard = ({ userId }) => {
             </div>
           )}
           
-          {/* Current Filter Indicator */}
-          <div className="mt-3 flex items-center justify-between">
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-              darkMode ? 'bg-gray-700 text-gray-300' : 'bg-blue-100 text-blue-800'
-            }`}>
-              <CalendarDaysIcon className="h-3 w-3 mr-1" />
-              {filterMode === 'custom' ? 'Custom Range: ' : 'Showing data for: '}
-              {getFilterDescription()}
-            </span>
-            
-            {/* Stats Summary */}
-            {stats && (
-              <div className="flex items-center space-x-4 text-xs text-gray-500">
-                <span>{stats.overview.totalTrades} trades</span>
-                <span className={stats.overview.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}>
-                  {formatCurrency(stats.overview.totalPnL)} P&L
-                </span>
-                <span>{stats.overview.winRate}% win rate</span>
-              </div>
-            )}
-          </div>
+          {/* Filter Summary */}
+          {stats && (
+            <div className="mt-3 flex items-center justify-between text-sm">
+              <span className="text-gray-600">
+                {getFilterDescription()} • {stats.overview.totalTrades} trades • {formatCurrency(stats.overview.totalPnL)} P&L
+              </span>
+              <span className="text-gray-600">
+                Win Rate: {stats.overview.winRate}%
+              </span>
+            </div>
+          )}
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-4 sm:px-0 space-y-6">
-          
-          {/* Key Performance Indicators */}
-          {stats && (
-            <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-6 w-full">
-              <StatCard
-                title="Total Trades"
-                value={stats.overview.totalTrades}
-                color="primary"
-                icon={ChartBarIcon}
-                trend={12}
-              />
-              <StatCard
-                title="Win Rate"
-                value={`${stats.overview.winRate}%`}
-                color={stats.overview.winRate >= 60 ? 'success' : stats.overview.winRate >= 40 ? 'warning' : 'danger'}
-                icon={stats.overview.winRate >= 60 ? ArrowTrendingUpIcon : ArrowTrendingDownIcon}
-                trend={stats.overview.winRate >= 60 ? 5 : -3}
-              />
-              <StatCard
-                title="Total P&L"
-                value={formatCurrency(stats.overview.totalPnL)}
-                color={stats.overview.totalPnL >= 0 ? 'success' : 'danger'}
-                icon={CurrencyDollarIcon}
-                trend={stats.overview.totalPnL >= 0 ? 8 : -5}
-              />
-      
-              <StatCard
-                title="Best Instrument"
-                value={stats.overview.bestInstrument || 'N/A'}
-                color="success"
-              />
-              <StatCard
-                title="Win Streak"
-                value={stats.overview.maxWinStreak || 0}
-                color="success"
-                icon={FireIcon}
-              />
-              <StatCard
-                title="Risk:Reward"
-                value={stats.overview.avgRiskReward || 'N/A'}
-                color="primary"
-              />
+      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Stats Grid */}
+        {stats && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <StatCard
+              title="Total Trades"
+              value={stats.overview.totalTrades}
+              icon={ChartBarIcon}
+            />
+            <StatCard
+              title="Win Rate"
+              value={`${stats.overview.winRate}%`}
+              color={stats.overview.winRate >= 50 ? 'success' : 'danger'}
+              icon={stats.overview.winRate >= 50 ? ArrowTrendingUpIcon : ArrowTrendingDownIcon}
+            />
+            <StatCard
+              title="Total P&L"
+              value={formatCurrency(stats.overview.totalPnL)}
+              color={stats.overview.totalPnL >= 0 ? 'success' : 'danger'}
+              icon={CurrencyDollarIcon}
+            />
+            <StatCard
+              title="Best Instrument"
+              value={stats.overview.bestInstrument || 'N/A'}
+              isInstrument={true}
+            />
+            <StatCard
+              title="Win Streak"
+              value={stats.overview.maxWinStreak || 0}
+              icon={FireIcon}
+            />
+            <StatCard
+              title="Risk:Reward"
+              value={stats.overview.avgRiskReward || 'N/A'}
+            />
+          </div>
+        )}
+
+        {/* Calendar */}
+        <div className="bg-white shadow-sm rounded border border-gray-200">
+          <div className="calendar-container">
+            <CalendarView onDateClick={handleDateClick} selectedDate={selectedDate} userId={userId} />
+          </div>
+        </div>
+
+        {/* Trades Table */}
+        <div className="bg-white shadow-sm rounded border border-gray-200">
+          <div className="px-4 py-3 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">All Trades</h3>
+              <Link 
+                to="/trades" 
+                className="text-sm text-blue-600 hover:text-blue-500"
+              >
+                View all →
+              </Link>
             </div>
-          )}
-
-          {/* Enhanced Filter Summary */}
-          {stats && (
-            <div className={`rounded-lg p-4 ${darkMode ? 'bg-gray-800' : 'bg-blue-50'} border ${darkMode ? 'border-gray-700' : 'border-blue-200'}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className={`p-2 rounded-full ${darkMode ? 'bg-blue-900' : 'bg-blue-100'} mr-3`}>
-                    <ChartBarIcon className={`h-5 w-5 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`} />
-                  </div>
-                  <div>
-                    <h3 className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-blue-900'}`}>
-                      Performance Summary
-                    </h3>
-                    <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-blue-700'}`}>
-                      {getFilterDescription()} • {stats.overview.totalTrades} trades • {formatCurrency(stats.overview.totalPnL)} P&L
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    stats.overview.winRate >= 60 ? 'bg-green-100 text-green-800' : 
-                    stats.overview.winRate >= 40 ? 'bg-yellow-100 text-yellow-800' : 
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {stats.overview.winRate}% Win Rate
-                  </span>
-                  {filterMode === 'custom' && (
-                    <button
-                      onClick={resetFilters}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      Clear Filters
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Main Content Grid */}
-          <div className="">
-            
-            {/* Left Column - Charts */}
-            <div className="">
-              
-              {/* P&L Chart */}
-              {/* {stats && (
-                <div className="chart-container">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">P&L Performance</h3>
-                    <div className="flex space-x-2">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        ↗ Profitable Days: {stats.overview.profitableDays || 0}
-                      </span>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        ↘ Loss Days: {stats.overview.lossDays || 0}
-                      </span>
-                    </div>
-                  </div>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={stats.overview.dailyPnL || []}>
-                      <defs>
-                        <linearGradient id="colorPnL" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip 
-                        formatter={(value) => [formatCurrency(value), 'P&L']}
-                        labelFormatter={(label) => `Date: ${label}`}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="pnl" 
-                        stroke="#10B981" 
-                        fillOpacity={1}
-                        fill="url(#colorPnL)" 
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              )} */}
-
-              {/* Trading Calendar */}
-              <div className="bg-white shadow-sm rounded-xl border border-gray-200 w-full">
-                {/* <div className="px-6 py-4 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-900">Trading Calendar</h2>
-                  <p className="text-sm text-gray-600">Click on any date to add a trade</p>
-                </div> */}
-                <div className=" calendar-container">
-                  <CalendarView onDateClick={handleDateClick} selectedDate={selectedDate} userId={userId} />
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column - Quick Actions & Stats */}
-      
           </div>
 
-          {/* Recent Trades Table */}
-          <div className="bg-white shadow-sm rounded-xl border border-gray-200">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">All Trades</h3>
-                  <p className="text-sm text-gray-600">
-                    {filteredTrades.length > 0 ? (
-                      <>
-                        Showing {filteredTrades.length} trades
-                        {totalPages > 1 && ` (Page ${currentPage} of ${totalPages})`}
-                      </>
-                    ) : (
-                      'No trades found'
-                    )}
-                  </p>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <span className="text-sm text-gray-500">
-                    {tradesPerPage} per page
-                  </span>
-                  <Link 
-                    to="/trades" 
-                    className="text-sm text-blue-600 hover:text-blue-500 font-medium"
-                  >
-                    View all trades →
-                  </Link>
-                </div>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Instrument</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Direction</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lot Size</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">P&L</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Result</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Screenshot</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Instrument</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Direction</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lot Size</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">P&L</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Result</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Screenshot</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {recentTrades.map((trade) => (
+                  <tr key={trade._id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {new Date(trade.date).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <InstrumentIcon instrument={trade.instrument} />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <span className={`inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full ${
+                        trade.direction === 'Long' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-purple-100 text-purple-800'
+                      }`}>
+                        {trade.direction}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {trade.lotSize}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <span className={trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
+                        {formatCurrency(trade.pnl)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full ${
+                        trade.result === 'win' 
+                          ? 'bg-green-100 text-green-800'
+                          : trade.result === 'loss'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {trade.result.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="w-16 h-10">
+                        {trade.screenshotUrl ? (
+                          <img
+                            src={trade.screenshotUrl}
+                            alt="Trade screenshot"
+                            className="w-full h-full object-cover rounded border border-gray-200 cursor-pointer"
+                            onClick={() => {
+                              const modal = document.createElement('div');
+                              modal.className = 'fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50';
+                              modal.onclick = () => modal.remove();
+                              
+                              const img = document.createElement('img');
+                              img.src = trade.screenshotUrl;
+                              img.className = 'max-w-[90vw] max-h-[90vh] object-contain';
+                              
+                              modal.appendChild(img);
+                              document.body.appendChild(modal);
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+                            <span className="text-xs text-gray-400">No image</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <Link
+                        to={`/trade/${trade._id}`}
+                        className="text-purple-600 hover:text-blue-500 transition-colors btn-tertiary"
+                      >
+                        View
+                      </Link>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {recentTrades.map((trade) => (
-                    <tr key={trade._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(trade.date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {trade.instrument}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <span className={`inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full ${
-                          trade.direction === 'Long' 
-                            ? 'bg-blue-100 text-blue-800' 
-                            : 'bg-purple-100 text-purple-800'
-                        }`}>
-                          {trade.direction}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {trade.lotSize}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <span className={trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          {formatCurrency(trade.pnl)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full ${
-                          trade.result === 'win' 
-                            ? 'bg-green-100 text-green-800'
-                            : trade.result === 'loss'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {trade.result.toUpperCase()}
-                        </span>
-                      </td>
-                     
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="w-16 h-10">
-                          {trade.screenshotUrl ? (
-                            <img
-                              src={trade.screenshotUrl}
-                              alt="Trade screenshot"
-                              className="w-full h-full object-cover rounded border border-gray-200 cursor-pointer"
-                              onClick={() => {
-                                // Open fullscreen view
-                                const modal = document.createElement('div');
-                                modal.className = 'fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50';
-                                modal.onclick = () => modal.remove();
-                                
-                                const img = document.createElement('img');
-                                img.src = trade.screenshotUrl;
-                                img.className = 'max-w-[90vw] max-h-[90vh] object-contain';
-                                
-                                modal.appendChild(img);
-                                document.body.appendChild(modal);
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
-                              <span className="text-xs text-gray-400">No image</span>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <Link
-                          to={`/trade/${trade._id}`}
-                          className="text-purple-600 hover:text-blue-500 transition-colors btn-tertiary"
-                        >
-                          View
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            {/* Pagination Controls */}
-            {recentTrades.length > 0 && <PaginationControls />}
-            
-            {/* Empty State */}
-            {filteredTrades.length === 0 && (
-              <div className="px-6 py-12 text-center">
-                <ChartBarIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No trades found</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  {allTrades.length === 0 
-                    ? 'Get started by adding your first trade.'
-                    : 'No trades match your current filter. Try adjusting your date range.'
-                  }
-                </p>
-                <div className="mt-6">
-                  <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="btn-primary"
-                  >
-                    <PlusIcon className="h-4 w-4 mr-2" />
-                    Add your first trade
-                  </button>
-                </div>
-              </div>
-            )}
+                ))}
+              </tbody>
+            </table>
           </div>
+
+          {/* Pagination Controls */}
+          {recentTrades.length > 0 && <PaginationControls />}
+          
+          {/* Empty State */}
+          {filteredTrades.length === 0 && (
+            <div className="px-6 py-12 text-center">
+              <ChartBarIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No trades found</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {allTrades.length === 0 
+                  ? 'Get started by adding your first trade.'
+                  : 'No trades match your current filter. Try adjusting your date range.'
+                }
+              </p>
+              <div className="mt-6">
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="btn-primary"
+                >
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  Add your first trade
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
-      {/* Trade Modal */}
+      {/* Keep existing TradeModal component */}
       <TradeModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

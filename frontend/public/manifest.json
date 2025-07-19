@@ -1,7 +1,7 @@
 {
   "short_name": "Trade Journal",
   "name": "Trade Journal - Track Your Trading Performance",
-  "description": "A comprehensive trading journal app to track and analyze your trading performance",
+  "description": "A comprehensive trading journal app to track and analyze your trading performance with offline support",
   "icons": [
     {
       "src": "icon-192x192.png",
@@ -31,25 +31,103 @@
       "type": "image/png"
     }
   ],
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "minimal-ui"],
   "theme_color": "#3B82F6",
   "background_color": "#F8FAFC",
   "orientation": "portrait-primary",
   "scope": "/",
   "categories": ["finance", "productivity", "business"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
   "screenshots": [
     {
       "src": "screenshot-wide.png",
       "sizes": "1280x720",
       "type": "image/png",
-      "form_factor": "wide"
+      "form_factor": "wide",
+      "label": "Trading Dashboard - Wide View"
     },
     {
       "src": "screenshot-narrow.png",
       "sizes": "750x1334",
       "type": "image/png",
-      "form_factor": "narrow"
+      "form_factor": "narrow",
+      "label": "Trade Journal Mobile View"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Trade",
+      "short_name": "Add Trade",
+      "description": "Quickly add a new trade entry",
+      "url": "/trades?action=new",
+      "icons": [
+        {
+          "src": "icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "short_name": "Analytics",
+      "description": "View your trading analytics",
+      "url": "/analytics",
+      "icons": [
+        {
+          "src": "icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Today's Trades",
+      "short_name": "Today",
+      "description": "View today's trading activity",
+      "url": "/dashboard?filter=today",
+      "icons": [
+        {
+          "src": "icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+tradejournal",
+      "url": "/trade?data=%s"
+    }
+  ],
+  "share_target": {
+    "action": "/share-target/",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": ["image/*", ".png", ".jpg", ".jpeg", ".gif"]
+        }
+      ]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/import",
+      "accept": {
+        "text/csv": [".csv"],
+        "application/json": [".json"]
+      }
     }
   ]
 } 

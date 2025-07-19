@@ -4,6 +4,7 @@ import { XMarkIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import { tradesAPI, formatCurrency, formatDateTime } from '../utils/api';
 import TradeScreenshot from './TradeScreenshot';
 import { useNotifications } from './Notifications';
+import InstrumentIcon from './shared/InstrumentIcon';
 
 const TradeDetail = ({ userId }) => {
   const { id } = useParams();
@@ -445,7 +446,9 @@ const TradeDetail = ({ userId }) => {
                         </div>
                         <div>
                           <h4 className="text-sm font-medium text-gray-500">Instrument</h4>
-                          <p className="mt-1 text-lg text-gray-900">{trade.instrument}</p>
+                          <p className="mt-1 text-lg text-gray-900">
+                            <InstrumentIcon instrument={trade.instrument} />
+                          </p>
                         </div>
                         <div>
                           <h4 className="text-sm font-medium text-gray-500">Direction</h4>
