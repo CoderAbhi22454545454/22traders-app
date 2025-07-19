@@ -25,26 +25,43 @@ const TradeScreenshot = ({ trade, onScreenshotDeleted, showDeleteButton = true }
   };
 
   const getImageFormat = () => {
+    // Check metadata first (works for both Base64 and Cloudinary)
     if (trade.screenshotMetadata && trade.screenshotMetadata.mimetype) {
-      return trade.screenshotMetadata.mimetype.split('/')[1]?.toUpperCase();
+      return trade.screenshotMetadata.mimetype.split('/')[1]?.toUpperCase() || 
+             trade.screenshotMetadata.mimetype.toUpperCase();
     }
+    
+    // For Base64 images (legacy)
     if (trade.screenshotUrl && trade.screenshotUrl.startsWith('data:')) {
       const mimeMatch = trade.screenshotUrl.match(/^data:([^;]+);base64,/);
       if (mimeMatch && mimeMatch[1]) {
         return mimeMatch[1].split('/')[1]?.toUpperCase();
       }
     }
+    
+    // For Cloudinary URLs, try to extract format from URL
+    if (trade.screenshotUrl && !trade.screenshotUrl.startsWith('data:')) {
+      const urlMatch = trade.screenshotUrl.match(/\.([a-zA-Z0-9]+)(?:[?#]|$)/);
+      if (urlMatch && urlMatch[1]) {
+        return urlMatch[1].toUpperCase();
+      }
+      // Fallback for Cloudinary auto-format
+      return 'WebP/Auto';
+    }
+    
     return 'Unknown';
   };
 
   const getImageSize_bytes = () => {
+    // Check metadata first (works for both Base64 and Cloudinary)
     if (trade.screenshotMetadata && trade.screenshotMetadata.size) {
       const bytes = trade.screenshotMetadata.size;
       if (bytes < 1024) return `${bytes} B`;
       if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
       return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     }
-    // For Base64, we can estimate size from the string length
+    
+    // For Base64 images (legacy), estimate size from string length
     if (trade.screenshotUrl && trade.screenshotUrl.startsWith('data:')) {
       const base64Part = trade.screenshotUrl.split(',')[1];
       if (base64Part) {
@@ -54,6 +71,12 @@ const TradeScreenshot = ({ trade, onScreenshotDeleted, showDeleteButton = true }
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
       }
     }
+    
+    // For Cloudinary images, we can't determine size from URL alone
+    if (trade.screenshotUrl && !trade.screenshotUrl.startsWith('data:')) {
+      return 'Optimized';
+    }
+    
     return 'Unknown';
   };
 

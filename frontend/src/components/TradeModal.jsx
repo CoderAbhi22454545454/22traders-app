@@ -215,8 +215,8 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        error('File size must be less than 5MB');
+      if (file.size > 10 * 1024 * 1024) {
+        error('File size must be less than 10MB');
         return;
       }
       
@@ -786,7 +786,7 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
                                   </label>
                                   <p className="pl-1">or drag and drop</p>
                                 </div>
-                                <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                                <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
                               </>
                             )}
                           </div>

@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const { body, validationResult } = require('express-validator');
 const mongoose = require('mongoose');
+const cloudinary = require('../config/cloudinary');
 const Trade = require('../models/Trade');
 
 const router = express.Router();
@@ -11,7 +12,7 @@ const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit (Base64 increases size by ~33%)
+    fileSize: 10 * 1024 * 1024 // 10MB limit for Cloudinary
   },
   fileFilter: (req, file, cb) => {
     // Allow common image formats
@@ -24,36 +25,53 @@ const upload = multer({
   }
 });
 
-// Helper function to convert image buffer to Base64
-const convertToBase64 = (buffer, mimetype) => {
+// Helper function to upload image to Cloudinary
+const uploadToCloudinary = async (buffer, originalname) => {
   try {
-    const base64 = buffer.toString('base64');
-    return `data:${mimetype};base64,${base64}`;
+    return new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'image',
+          folder: 'trade-journal', // Organize uploads in a folder
+          use_filename: true,
+          unique_filename: true,
+          quality: 'auto'
+          // Removed format: 'auto' as it's causing transformation errors
+          // Cloudinary will automatically choose the best format
+        },
+        (error, result) => {
+          if (error) {
+            reject(new Error(`Cloudinary upload failed: ${error.message}`));
+          } else {
+            resolve({
+              url: result.secure_url,
+              publicId: result.public_id,
+              metadata: {
+                filename: originalname,
+                mimetype: result.format ? `image/${result.format}` : 'image/jpeg',
+                size: result.bytes,
+                uploadDate: new Date(),
+                cloudinaryUrl: result.secure_url,
+                cloudinaryPublicId: result.public_id
+              }
+            });
+          }
+        }
+      ).end(buffer);
+    });
   } catch (error) {
-    throw new Error(`Failed to convert image to Base64: ${error.message}`);
+    throw new Error(`Failed to upload to Cloudinary: ${error.message}`);
   }
 };
 
-// Helper function to compress image (optional - for better performance)
-const compressImage = async (buffer, mimetype) => {
+// Helper function to delete image from Cloudinary
+const deleteFromCloudinary = async (publicId) => {
   try {
-    // For now, we'll just return the original buffer
-    // You can add image compression libraries like 'sharp' later if needed
-    return buffer;
+    const result = await cloudinary.uploader.destroy(publicId);
+    return result;
   } catch (error) {
-    console.error('Image compression failed:', error);
-    return buffer; // Return original if compression fails
+    throw new Error(`Failed to delete from Cloudinary: ${error.message}`);
   }
-};
-
-// Helper function to get image metadata
-const getImageMetadata = (buffer, mimetype, originalname) => {
-  return {
-    filename: originalname,
-    mimetype: mimetype,
-    size: buffer.length,
-    uploadDate: new Date()
-  };
 };
 
 // Validation rules for trade creation
@@ -261,20 +279,20 @@ router.post('/', upload.single('screenshot'), tradeValidation, async (req, res) 
 
     // Upload screenshot if provided
     let screenshotUrl = '';
+    let screenshotPublicId = '';
     let screenshotMetadata = {};
     if (req.file) {
       try {
-        // Convert image to Base64 and get metadata
-        const compressedBuffer = await compressImage(req.file.buffer, req.file.mimetype);
-        const base64Image = convertToBase64(compressedBuffer, req.file.mimetype);
-        const metadata = getImageMetadata(compressedBuffer, req.file.mimetype, req.file.originalname);
+        // Upload image to Cloudinary
+        const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.originalname);
 
-        screenshotUrl = base64Image;
-        screenshotMetadata = metadata;
+        screenshotUrl = uploadResult.url;
+        screenshotPublicId = uploadResult.publicId;
+        screenshotMetadata = uploadResult.metadata;
       } catch (uploadError) {
-        console.error('Base64 conversion error:', uploadError);
+        console.error('Cloudinary upload error:', uploadError);
         return res.status(500).json({ 
-          message: 'Error processing screenshot', 
+          message: 'Error uploading screenshot to Cloudinary', 
           error: uploadError.message 
         });
       }
@@ -308,6 +326,7 @@ router.post('/', upload.single('screenshot'), tradeValidation, async (req, res) 
       notes,
       additionalNotes,
       screenshotUrl,
+      screenshotPublicId,
       screenshotMetadata
     });
 
@@ -634,20 +653,30 @@ router.put('/:id', upload.single('screenshot'), tradeValidation, async (req, res
 
     // Upload new screenshot if provided
     let screenshotUrl;
+    let screenshotPublicId;
     let screenshotMetadata;
     if (req.file) {
       try {
-        // Convert image to Base64 and get metadata
-        const compressedBuffer = await compressImage(req.file.buffer, req.file.mimetype);
-        const base64Image = convertToBase64(compressedBuffer, req.file.mimetype);
-        const metadata = getImageMetadata(compressedBuffer, req.file.mimetype, req.file.originalname);
+        // Delete old screenshot from Cloudinary if exists
+        const existingTrade = await Trade.findById(req.params.id);
+        if (existingTrade && existingTrade.screenshotPublicId) {
+          try {
+            await deleteFromCloudinary(existingTrade.screenshotPublicId);
+          } catch (deleteError) {
+            console.warn('Failed to delete old screenshot from Cloudinary:', deleteError);
+          }
+        }
 
-        screenshotUrl = base64Image;
-        screenshotMetadata = metadata;
+        // Upload new image to Cloudinary
+        const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.originalname);
+
+        screenshotUrl = uploadResult.url;
+        screenshotPublicId = uploadResult.publicId;
+        screenshotMetadata = uploadResult.metadata;
       } catch (uploadError) {
-        console.error('Base64 conversion error:', uploadError);
+        console.error('Cloudinary upload error:', uploadError);
         return res.status(500).json({ 
-          message: 'Error processing screenshot', 
+          message: 'Error uploading screenshot to Cloudinary', 
           error: uploadError.message 
         });
       }
@@ -690,6 +719,7 @@ router.put('/:id', upload.single('screenshot'), tradeValidation, async (req, res
     // Only update screenshot if new one provided
     if (screenshotUrl) {
       updateData.screenshotUrl = screenshotUrl;
+      updateData.screenshotPublicId = screenshotPublicId;
       updateData.screenshotMetadata = screenshotMetadata;
     }
 
@@ -729,11 +759,18 @@ router.delete('/:id/screenshot', async (req, res) => {
       return res.status(404).json({ message: 'No screenshot found for this trade' });
     }
 
-    // For Base64 storage, we don't need to delete from external service
-    // The image data is stored directly in MongoDB and will be removed with the trade
+    // Delete image from Cloudinary if publicId exists
+    if (trade.screenshotPublicId) {
+      try {
+        await deleteFromCloudinary(trade.screenshotPublicId);
+      } catch (deleteError) {
+        console.warn('Failed to delete screenshot from Cloudinary:', deleteError);
+      }
+    }
 
     // Remove screenshot data from trade
     trade.screenshotUrl = undefined;
+    trade.screenshotPublicId = undefined;
     trade.screenshotMetadata = undefined;
     await trade.save();
 
@@ -756,8 +793,14 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Trade not found' });
     }
 
-    // For Base64 storage, we don't need to delete from external service
-    // The image data is stored directly in MongoDB and will be removed with the trade
+    // Delete image from Cloudinary if publicId exists
+    if (trade.screenshotPublicId) {
+      try {
+        await deleteFromCloudinary(trade.screenshotPublicId);
+      } catch (deleteError) {
+        console.warn('Failed to delete screenshot from Cloudinary:', deleteError);
+      }
+    }
 
     // Delete the trade
     await Trade.findByIdAndDelete(req.params.id);

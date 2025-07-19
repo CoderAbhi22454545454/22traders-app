@@ -121,6 +121,10 @@ const tradeSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  screenshotPublicId: {
+    type: String,
+    trim: true
+  },
   screenshotMetadata: {
     filename: {
       type: String,
@@ -137,6 +141,14 @@ const tradeSchema = new mongoose.Schema({
     uploadDate: {
       type: Date,
       default: Date.now
+    },
+    cloudinaryUrl: {
+      type: String,
+      trim: true
+    },
+    cloudinaryPublicId: {
+      type: String,
+      trim: true
     }
   },
   createdAt: {

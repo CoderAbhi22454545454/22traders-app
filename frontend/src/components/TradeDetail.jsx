@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { XMarkIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import { tradesAPI, formatCurrency, formatDateTime } from '../utils/api';
 import TradeScreenshot from './TradeScreenshot';
+import { useNotifications } from './Notifications';
 
 const TradeDetail = ({ userId }) => {
   const { id } = useParams();
@@ -11,6 +13,11 @@ const TradeDetail = ({ userId }) => {
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
+  
+  // Image upload state
+  const [newScreenshot, setNewScreenshot] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const { success, error } = useNotifications();
 
   useEffect(() => {
     fetchTrade();
@@ -34,22 +41,36 @@ const TradeDetail = ({ userId }) => {
     setEditing(true);
   };
 
-  const handleCancelEdit = () => {
-    setEditing(false);
-    setEditData(trade);
-  };
+
 
   const handleSave = async (e) => {
     e.preventDefault();
     try {
       setSaving(true);
-      await tradesAPI.updateTrade(id, editData);
+      
+      // Prepare data for update, including new screenshot if selected
+      const updateData = { ...editData };
+      if (newScreenshot) {
+        updateData.screenshot = newScreenshot;
+      }
+      
+      await tradesAPI.updateTrade(id, updateData);
       await fetchTrade();
       setEditing(false);
-      alert('Trade updated successfully!');
-    } catch (error) {
-      console.error('Error updating trade:', error);
-      alert('Failed to update trade');
+      
+      // Clean up screenshot states
+      if (newScreenshot) {
+        setNewScreenshot(null);
+      }
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl('');
+      }
+      
+      success('Trade updated successfully!');
+    } catch (err) {
+      console.error('Error updating trade:', err);
+      error('Failed to update trade');
     } finally {
       setSaving(false);
     }
@@ -73,6 +94,50 @@ const TradeDetail = ({ userId }) => {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        error('File size must be less than 10MB');
+        return;
+      }
+      
+      if (!file.type.startsWith('image/')) {
+        error('Only image files are allowed');
+        return;
+      }
+      
+      setNewScreenshot(file);
+      
+      // Create preview URL
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      success('New screenshot selected');
+    }
+  };
+
+  const removeNewScreenshot = () => {
+    setNewScreenshot(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl('');
+    success('New screenshot removed');
+  };
+
+  const handleCancelEdit = () => {
+    setEditing(false);
+    setEditData(trade);
+    // Clean up any new screenshot selection
+    if (newScreenshot) {
+      setNewScreenshot(null);
+    }
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl('');
+    }
   };
 
   if (loading) {
@@ -292,6 +357,74 @@ const TradeDetail = ({ userId }) => {
                         className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Additional notes about this trade..."
                       />
+                    </div>
+
+                    {/* Screenshot Update Section */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Update Screenshot
+                      </label>
+                      <div className="space-y-4">
+                        {/* Current Screenshot */}
+                        {trade.screenshotUrl && !previewUrl && (
+                          <div>
+                            <p className="text-sm text-gray-600 mb-2">Current screenshot:</p>
+                            <img
+                              src={trade.screenshotUrl}
+                              alt="Current trade screenshot"
+                              className="h-32 w-auto rounded-lg border border-gray-300"
+                            />
+                          </div>
+                        )}
+
+                        {/* New Screenshot Preview */}
+                        {previewUrl && (
+                          <div>
+                            <p className="text-sm text-gray-600 mb-2">New screenshot:</p>
+                            <div className="relative inline-block">
+                              <img
+                                src={previewUrl}
+                                alt="New screenshot preview"
+                                className="h-32 w-auto rounded-lg border border-gray-300"
+                              />
+                              <button
+                                type="button"
+                                onClick={removeNewScreenshot}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                              >
+                                <XMarkIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Upload New Screenshot */}
+                        <div className="mt-1 flex justify-center px-6 pt-4 pb-4 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors">
+                          <div className="space-y-1 text-center">
+                            <PhotoIcon className="mx-auto h-8 w-8 text-gray-400" />
+                            <div className="flex text-sm text-gray-600">
+                              <label
+                                htmlFor="screenshot-update"
+                                className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                              >
+                                <span>
+                                  {previewUrl ? 'Change screenshot' : (trade.screenshotUrl ? 'Replace screenshot' : 'Upload screenshot')}
+                                </span>
+                                <input
+                                  id="screenshot-update"
+                                  name="screenshot"
+                                  type="file"
+                                  className="sr-only"
+                                  accept="image/*"
+                                  onChange={handleFileChange}
+                                />
+                              </label>
+                              <p className="pl-1">or drag and drop</p>
+                            </div>
+                            <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </form>
                 ) : (

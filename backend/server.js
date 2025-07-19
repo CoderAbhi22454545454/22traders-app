@@ -4,6 +4,9 @@ const cors = require('cors');
 const morgan = require('morgan');
 require('dotenv').config();
 
+// Initialize Cloudinary
+require('./config/cloudinary');
+
 const app = express();
 
 // Middleware
@@ -11,6 +14,7 @@ app.use(cors({
   origin: [
     'https://fx-trading-journal.netlify.app',
     'https://687a025701b4a620efa7d732--fx-trading-journal.netlify.app',
+    
     'http://localhost:3000',
     'http://localhost:5001',
     'http://127.0.0.1:5001',
