@@ -179,10 +179,10 @@ const CalendarView = ({ onDateClick, selectedDate, userId }) => {
 
   if (loading) {
     return (
-      <div className="w-full h-[600px] flex items-center justify-center bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200">
-        <div className="flex items-center space-x-3 bg-white rounded-lg p-4 shadow-md">
-          <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-gray-700 font-medium">Loading your trading calendar...</span>
+      <div className="w-full h-96 flex items-center justify-center bg-white rounded-lg border border-gray-200">
+        <div className="flex items-center space-x-2">
+          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-gray-600">Loading calendar...</span>
         </div>
       </div>
     );
@@ -192,12 +192,12 @@ const CalendarView = ({ onDateClick, selectedDate, userId }) => {
   const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
   return (
-    <div className="w-full bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-6">
+    <div className="w-full bg-white rounded-lg border border-gray-200 p-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <button
           onClick={() => navigateMonth(-1)}
-          className="p-3 hover:bg-white hover:shadow-md rounded-xl transition-all duration-200 text-gray-600 hover:text-gray-900"
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           aria-label="Previous month"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,18 +205,13 @@ const CalendarView = ({ onDateClick, selectedDate, userId }) => {
           </svg>
         </button>
         
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">
-            {formatMonth(currentDate)}
-          </h2>
-          <div className="text-sm text-gray-500">
-            Click on dates to view trades
-          </div>
-        </div>
+        <h2 className="text-lg font-semibold text-gray-900">
+          {formatMonth(currentDate)}
+        </h2>
         
         <button
           onClick={() => navigateMonth(1)}
-          className="p-3 hover:bg-white hover:shadow-md rounded-xl transition-all duration-200 text-gray-600 hover:text-gray-900"
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           aria-label="Next month"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -226,25 +221,25 @@ const CalendarView = ({ onDateClick, selectedDate, userId }) => {
       </div>
 
       {/* Weekday Headers */}
-      <div className="grid grid-cols-7 gap-2 mb-3">
+      <div className="grid grid-cols-7 gap-1 mb-2">
         {weekdays.map((day) => (
-          <div key={day} className="text-center text-sm font-bold text-gray-400 py-3 bg-gray-50 rounded-lg">
+          <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
             {day}
           </div>
         ))}
       </div>
 
       {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-1">
         {daysInMonth.map((date, index) => {
           if (!date) {
-            return <div key={index} className="h-20 sm:h-24"></div>;
+            return <div key={index} className="h-20"></div>;
           }
 
           const tradeInfo = getTradeInfoForDate(date);
-          const todayClass = isToday(date) ? 'ring-2 ring-blue-500 ring-opacity-60' : '';
-          const selectedClass = isSelected(date) ? 'bg-blue-500 text-white shadow-lg scale-105' : '';
-          const tradeBackgroundClass = tradeInfo ? getBackgroundColor(tradeInfo.overallResult) : 'bg-white border-gray-200';
+          const todayClass = isToday(date) ? 'border-blue-500 border-2' : 'border-gray-200';
+          const selectedClass = isSelected(date) ? 'bg-blue-500 text-white' : '';
+          const tradeBackgroundClass = tradeInfo ? getBackgroundColor(tradeInfo.overallResult) : 'bg-white';
           
           return (
             <div
@@ -253,32 +248,45 @@ const CalendarView = ({ onDateClick, selectedDate, userId }) => {
               onMouseEnter={(e) => handleMouseEnter(e, date)}
               onMouseLeave={handleMouseLeave}
               className={`
-                relative h-20 sm:h-24 border-2 rounded-xl cursor-pointer
-                hover:shadow-lg hover:scale-105 transition-all duration-200
-                flex flex-col p-1 sm:p-2 text-xs transform
+                relative h-20 border rounded cursor-pointer
+                hover:bg-gray-50 transition-colors duration-150
+                flex flex-col p-2 text-xs
                 ${todayClass} ${selectedClass} ${tradeBackgroundClass}
-                ${tradeInfo ? 'hover:shadow-2xl' : 'hover:bg-gray-50'}
               `}
             >
-              {/* Date number and trade count badge */}
+              {/* Date number and result indicator */}
               <div className="flex items-center justify-between w-full mb-1">
-                <span className={`font-bold text-sm ${isToday(date) ? 'text-blue-600' : 'text-gray-800'}`}>
+                <span className={`font-medium text-sm ${isToday(date) ? 'text-blue-600' : 'text-gray-800'}`}>
                   {date.getDate()}
                 </span>
                 {tradeInfo && (
-                  <div className="relative">
-                    <span className={`
-                      inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white
-                      shadow-md ${getIndicatorColor(tradeInfo.overallResult)}
-                    `}>
+                  <div className="flex items-center space-x-1">
+                    {/* Trade count badge */}
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-medium text-white bg-gray-600">
                       {tradeInfo.count}
                     </span>
-                    {/* Win rate indicator */}
-                    {tradeInfo.count > 0 && (
-                      <div className={`absolute -bottom-1 -right-1 w-2 h-2 rounded-full ${
-                        (tradeInfo.wins / tradeInfo.count) >= 0.5 ? 'bg-green-300' : 'bg-red-300'
-                      }`} />
-                    )}
+                    {/* Up/Down arrow indicator */}
+                    <div className={`
+                      w-5 h-5 rounded-full flex items-center justify-center
+                      ${tradeInfo.overallResult === 'win' ? 'bg-green-100' : 
+                        tradeInfo.overallResult === 'loss' ? 'bg-red-100' : 'bg-yellow-100'}
+                    `}>
+                      {tradeInfo.overallResult === 'win' && (
+                        <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                        </svg>
+                      )}
+                      {tradeInfo.overallResult === 'loss' && (
+                        <svg className="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                        </svg>
+                      )}
+                      {tradeInfo.overallResult === 'breakEven' && (
+                        <svg className="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14" />
+                        </svg>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -286,48 +294,26 @@ const CalendarView = ({ onDateClick, selectedDate, userId }) => {
               {/* Trade Information */}
               {tradeInfo && (
                 <div className="flex-1 flex flex-col justify-center items-center space-y-1">
-                  {/* P&L - Fixed double dollar and rounding */}
-                  <div className={`text-xs font-bold ${
+                  {/* P&L */}
+                  <div className={`text-xs font-medium ${
                     tradeInfo.totalPnL > 0 ? 'text-green-600' : 
                     tradeInfo.totalPnL < 0 ? 'text-red-600' : 'text-yellow-600'
                   }`}>
                     {tradeInfo.totalPnL > 0 ? '+' : ''}${tradeInfo.totalPnL.toFixed(2)}
                   </div>
                   
-                  {/* Average P&L per trade */}
-                  <div className="text-xs text-gray-500">
-                    Avg: ${(tradeInfo.totalPnL / tradeInfo.count).toFixed(1)}
-                  </div>
-                  
                   {/* Instruments */}
-                  <div className="text-xs text-gray-600 text-center leading-tight">
+                  <div className="text-xs text-gray-600 text-center">
                     {tradeInfo.instruments.slice(0, 2).map(instrument => {
                       return instrument
-                        .replace('XAUUSD', '🥇')
-                        .replace('BTCUSD', '₿')
-                        .replace('EURUSD', '€');
-                    }).join(' ')}
+                        .replace('XAUUSD', 'Gold')
+                        .replace('BTCUSD', 'BTC')
+                        .replace('EURUSD', 'EUR');
+                    }).join(', ')}
                     {tradeInfo.instruments.length > 2 && (
-                      <span className="text-gray-400 ml-1">+{tradeInfo.instruments.length - 2}</span>
+                      <span className="text-gray-400">+{tradeInfo.instruments.length - 2}</span>
                     )}
                   </div>
-                  
-                  {/* Win rate bar */}
-                  {tradeInfo.count > 1 && (
-                    <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full ${tradeInfo.wins / tradeInfo.count >= 0.5 ? 'bg-green-400' : 'bg-red-400'}`}
-                        style={{ width: `${(tradeInfo.wins / tradeInfo.count) * 100}%` }}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {/* Empty day indicator */}
-              {!tradeInfo && (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="w-1 h-1 bg-gray-300 rounded-full opacity-30"></div>
                 </div>
               )}
             </div>
@@ -335,66 +321,75 @@ const CalendarView = ({ onDateClick, selectedDate, userId }) => {
         })}
       </div>
 
-      {/* Enhanced Legend & Stats */}
-      <div className="mt-6 space-y-4">
-        {/* Legend */}
-        <div className="flex items-center justify-center space-x-8 text-sm text-gray-600 bg-white rounded-lg p-3 shadow-sm">
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded-full bg-green-500 shadow-sm"></div>
-            <span className="font-medium">Profitable</span>
+      {/* Simple Legend */}
+      <div className="mt-4 flex items-center justify-center space-x-6 text-sm text-gray-600">
+        <div className="flex items-center space-x-2">
+          <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+            <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+            </svg>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded-full bg-red-500 shadow-sm"></div>
-            <span className="font-medium">Loss</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded-full bg-yellow-500 shadow-sm"></div>
-            <span className="font-medium">Break Even</span>
-          </div>
+          <span>Profitable</span>
         </div>
-        
-        {/* Monthly Summary */}
-        {tradeDates.length > 0 && (() => {
-          const monthData = tradeDates.filter(td => {
-            const tdDate = new Date(td.date);
-            return tdDate.getMonth() === currentDate.getMonth() && 
-                   tdDate.getFullYear() === currentDate.getFullYear();
-          });
-          
-          if (monthData.length === 0) return null;
-          
-          const totalTrades = monthData.reduce((sum, day) => sum + day.count, 0);
-          const totalPnL = monthData.reduce((sum, day) => sum + day.totalPnL, 0);
-          const totalWins = monthData.reduce((sum, day) => sum + day.wins, 0);
-          const winRate = totalTrades > 0 ? (totalWins / totalTrades * 100).toFixed(1) : 0;
-          const tradingDays = monthData.length;
-          
-          return (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white rounded-lg p-3 shadow-sm text-center border">
-                <div className="text-lg font-bold text-gray-900">{totalTrades}</div>
-                <div className="text-xs text-gray-500">Total Trades</div>
-              </div>
-              <div className="bg-white rounded-lg p-3 shadow-sm text-center border">
-                <div className={`text-lg font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
-                </div>
-                <div className="text-xs text-gray-500">Month P&L</div>
-              </div>
-              <div className="bg-white rounded-lg p-3 shadow-sm text-center border">
-                <div className={`text-lg font-bold ${parseFloat(winRate) >= 50 ? 'text-green-600' : 'text-red-600'}`}>
-                  {winRate}%
-                </div>
-                <div className="text-xs text-gray-500">Win Rate</div>
-              </div>
-              <div className="bg-white rounded-lg p-3 shadow-sm text-center border">
-                <div className="text-lg font-bold text-blue-600">{tradingDays}</div>
-                <div className="text-xs text-gray-500">Trading Days</div>
-              </div>
-            </div>
-          );
-        })()}
+        <div className="flex items-center space-x-2">
+          <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center">
+            <svg className="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </div>
+          <span>Loss</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="w-5 h-5 rounded-full bg-yellow-100 flex items-center justify-center">
+            <svg className="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14" />
+            </svg>
+          </div>
+          <span>Break Even</span>
+        </div>
       </div>
+
+      {/* Monthly Summary - Simplified */}
+      {tradeDates.length > 0 && (() => {
+        const monthData = tradeDates.filter(td => {
+          const tdDate = new Date(td.date);
+          return tdDate.getMonth() === currentDate.getMonth() && 
+                 tdDate.getFullYear() === currentDate.getFullYear();
+        });
+        
+        if (monthData.length === 0) return null;
+        
+        const totalTrades = monthData.reduce((sum, day) => sum + day.count, 0);
+        const totalPnL = monthData.reduce((sum, day) => sum + day.totalPnL, 0);
+        const totalWins = monthData.reduce((sum, day) => sum + day.wins, 0);
+        const winRate = totalTrades > 0 ? (totalWins / totalTrades * 100).toFixed(1) : 0;
+        const tradingDays = monthData.length;
+        
+        return (
+          <div className="mt-4 grid grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+            <div className="text-center">
+              <div className="text-lg font-semibold text-gray-900">{totalTrades}</div>
+              <div className="text-xs text-gray-500">Trades</div>
+            </div>
+            <div className="text-center">
+              <div className={`text-lg font-semibold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
+              </div>
+              <div className="text-xs text-gray-500">P&L</div>
+            </div>
+            <div className="text-center">
+              <div className={`text-lg font-semibold ${parseFloat(winRate) >= 50 ? 'text-green-600' : 'text-red-600'}`}>
+                {winRate}%
+              </div>
+              <div className="text-xs text-gray-500">Win Rate</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-gray-900">{tradingDays}</div>
+              <div className="text-xs text-gray-500">Days</div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Custom Tooltip */}
       {tooltip.show && tooltip.content && (
