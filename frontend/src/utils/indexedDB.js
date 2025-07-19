@@ -12,7 +12,8 @@ const STORES = {
   USER_DATA: 'userData',
   PENDING_SYNC: 'pendingSync',
   CACHE_METADATA: 'cacheMetadata',
-  SETTINGS: 'settings'
+  SETTINGS: 'settings',
+  API_CACHE: 'apiCache'
 };
 
 class IndexedDBManager {
@@ -89,10 +90,22 @@ class IndexedDBManager {
       const settingsStore = db.createObjectStore(STORES.SETTINGS, { keyPath: 'key' });
       console.log('Created settings store');
     }
+
+    // API Cache store
+    if (!db.objectStoreNames.contains(STORES.API_CACHE)) {
+      const apiCacheStore = db.createObjectStore(STORES.API_CACHE, { keyPath: 'key' });
+      apiCacheStore.createIndex('timestamp', 'timestamp', { unique: false });
+      apiCacheStore.createIndex('stale', 'stale', { unique: false });
+      console.log('Created API cache store');
+    }
   }
 
   // Generic CRUD operations
   async add(storeName, data) {
+    if (!this.db) {
+      throw new Error('Database not initialized. Call init() first.');
+    }
+    
     const transaction = this.db.transaction([storeName], 'readwrite');
     const store = transaction.objectStore(storeName);
     
@@ -109,6 +122,10 @@ class IndexedDBManager {
   }
 
   async put(storeName, data) {
+    if (!this.db) {
+      throw new Error('Database not initialized. Call init() first.');
+    }
+    
     const transaction = this.db.transaction([storeName], 'readwrite');
     const store = transaction.objectStore(storeName);
     
@@ -124,6 +141,10 @@ class IndexedDBManager {
   }
 
   async get(storeName, id) {
+    if (!this.db) {
+      throw new Error('Database not initialized. Call init() first.');
+    }
+    
     const transaction = this.db.transaction([storeName], 'readonly');
     const store = transaction.objectStore(storeName);
     
@@ -135,6 +156,10 @@ class IndexedDBManager {
   }
 
   async getAll(storeName, indexName = null, query = null) {
+    if (!this.db) {
+      throw new Error('Database not initialized. Call init() first.');
+    }
+    
     const transaction = this.db.transaction([storeName], 'readonly');
     const store = transaction.objectStore(storeName);
     const source = indexName ? store.index(indexName) : store;
@@ -147,6 +172,10 @@ class IndexedDBManager {
   }
 
   async delete(storeName, id) {
+    if (!this.db) {
+      throw new Error('Database not initialized. Call init() first.');
+    }
+    
     const transaction = this.db.transaction([storeName], 'readwrite');
     const store = transaction.objectStore(storeName);
     
@@ -158,6 +187,10 @@ class IndexedDBManager {
   }
 
   async clear(storeName) {
+    if (!this.db) {
+      throw new Error('Database not initialized. Call init() first.');
+    }
+    
     const transaction = this.db.transaction([storeName], 'readwrite');
     const store = transaction.objectStore(storeName);
     
@@ -359,6 +392,10 @@ class IndexedDBManager {
 
   // Bulk operations
   async bulkSaveTrades(trades) {
+    if (!this.db) {
+      throw new Error('Database not initialized. Call init() first.');
+    }
+    
     const transaction = this.db.transaction([STORES.TRADES], 'readwrite');
     const store = transaction.objectStore(STORES.TRADES);
     
@@ -386,6 +423,11 @@ class IndexedDBManager {
   }
 
   async cleanup() {
+    if (!this.db) {
+      console.warn('Database not initialized. Skipping cleanup.');
+      return;
+    }
+    
     try {
       // Remove old cache metadata (older than 7 days)
       const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);

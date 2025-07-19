@@ -1,245 +1,287 @@
 /**
  * API Cache Manager for Trade Journal
- * Provides intelligent caching with expiration, ETags, and invalidation strategies
+ * Implements intelligent caching with ETag support and cache invalidation
  */
 
 import { getDB } from './indexedDB';
 
 class APICacheManager {
   constructor() {
+    this.cache = new Map(); // In-memory cache for current session
     this.defaultTTL = 5 * 60 * 1000; // 5 minutes default TTL
-    this.memoryCache = new Map();
-    this.pendingRequests = new Map();
+    this.cacheName = 'api-cache';
   }
 
   /**
-   * Generate cache key from URL and params
+   * Generate cache key from URL and parameters
    */
-  generateCacheKey(url, params = {}) {
-    const paramString = Object.keys(params)
+  getCacheKey(url, params = {}) {
+    const sortedParams = Object.keys(params)
       .sort()
-      .map(key => `${key}=${params[key]}`)
-      .join('&');
-    return `${url}${paramString ? `?${paramString}` : ''}`;
+      .reduce((result, key) => {
+        result[key] = params[key];
+        return result;
+      }, {});
+    
+    return `${url}?${new URLSearchParams(sortedParams).toString()}`;
   }
 
   /**
-   * Check if cached data is still valid
+   * Check if cache entry is valid
    */
-  isCacheValid(cachedItem, ttl = this.defaultTTL) {
-    if (!cachedItem || !cachedItem.timestamp) {
-      return false;
-    }
+  isCacheValid(cacheEntry, ttl = this.defaultTTL) {
+    if (!cacheEntry) return false;
     
     const now = Date.now();
-    const age = now - cachedItem.timestamp;
-    return age < ttl;
+    const cacheAge = now - cacheEntry.timestamp;
+    
+    // Check TTL
+    if (cacheAge > ttl) return false;
+    
+    // Check if marked as stale
+    if (cacheEntry.stale) return false;
+    
+    return true;
   }
 
   /**
-   * Get cached data from memory first, then IndexedDB
+   * Get cached response from IndexedDB
    */
-  async getCachedData(cacheKey, ttl = this.defaultTTL) {
+  async getCachedResponse(cacheKey, ttl = this.defaultTTL) {
     try {
-      // Check memory cache first (fastest)
-      const memoryItem = this.memoryCache.get(cacheKey);
-      if (memoryItem && this.isCacheValid(memoryItem, ttl)) {
-        console.log(`[APICache] Memory cache hit for: ${cacheKey}`);
+      // Check in-memory cache first
+      const memoryCache = this.cache.get(cacheKey);
+      if (memoryCache && this.isCacheValid(memoryCache, ttl)) {
+        console.log('[APICache] Memory cache hit:', cacheKey);
         return {
-          data: memoryItem.data,
-          source: 'memory',
-          timestamp: memoryItem.timestamp,
-          etag: memoryItem.etag
+          data: memoryCache.data,
+          fromCache: true,
+          cacheType: 'memory'
         };
       }
 
       // Check IndexedDB cache
       const db = await getDB();
-      const cachedItem = await db.getCacheMetadata(cacheKey);
+      const cachedEntry = await db.get('apiCache', cacheKey);
       
-      if (cachedItem && this.isCacheValid(cachedItem, ttl)) {
-        console.log(`[APICache] IndexedDB cache hit for: ${cacheKey}`);
+      if (cachedEntry && this.isCacheValid(cachedEntry, ttl)) {
+        console.log('[APICache] IndexedDB cache hit:', cacheKey);
         
-        // Update memory cache
-        this.memoryCache.set(cacheKey, cachedItem);
+        // Store in memory cache for faster access
+        this.cache.set(cacheKey, cachedEntry);
         
         return {
-          data: cachedItem.data,
-          source: 'indexeddb',
-          timestamp: cachedItem.timestamp,
-          etag: cachedItem.etag
+          data: cachedEntry.data,
+          fromCache: true,
+          cacheType: 'indexeddb',
+          etag: cachedEntry.etag,
+          lastModified: cachedEntry.lastModified
         };
       }
 
       return null;
     } catch (error) {
-      console.error('[APICache] Error getting cached data:', error);
+      console.error('[APICache] Error getting cached response:', error);
       return null;
     }
   }
 
   /**
-   * Store data in both memory and IndexedDB
+   * Store response in cache
    */
-  async setCachedData(cacheKey, data, etag = null, ttl = this.defaultTTL) {
+  async setCachedResponse(cacheKey, data, headers = {}) {
     try {
-      const cacheItem = {
+      const cacheEntry = {
+        key: cacheKey,
         data,
         timestamp: Date.now(),
-        etag,
-        ttl,
-        url: cacheKey
+        etag: headers.etag || headers.ETag,
+        lastModified: headers['last-modified'] || headers['Last-Modified'],
+        contentLength: headers['content-length'],
+        stale: false
       };
 
       // Store in memory cache
-      this.memoryCache.set(cacheKey, cacheItem);
+      this.cache.set(cacheKey, cacheEntry);
 
       // Store in IndexedDB
       const db = await getDB();
-      await db.setCacheMetadata(cacheKey, cacheItem);
+      await db.put('apiCache', cacheEntry);
 
-      console.log(`[APICache] Data cached for: ${cacheKey}`);
+      console.log('[APICache] Response cached:', cacheKey);
     } catch (error) {
-      console.error('[APICache] Error caching data:', error);
+      console.error('[APICache] Error caching response:', error);
     }
   }
 
   /**
-   * Make cached API request with network fallback
+   * Invalidate cache entries matching pattern
+   */
+  async invalidateCache(pattern) {
+    try {
+      console.log('[APICache] Invalidating cache pattern:', pattern);
+
+      // Clear memory cache
+      for (const key of this.cache.keys()) {
+        if (key.includes(pattern)) {
+          this.cache.delete(key);
+        }
+      }
+
+      // Clear IndexedDB cache
+      const db = await getDB();
+      const allEntries = await db.getAll('apiCache');
+      
+      const invalidationPromises = allEntries
+        .filter(entry => entry.key.includes(pattern))
+        .map(entry => db.delete('apiCache', entry.key));
+      
+      await Promise.all(invalidationPromises);
+      
+      console.log('[APICache] Cache invalidated for pattern:', pattern);
+    } catch (error) {
+      console.error('[APICache] Error invalidating cache:', error);
+    }
+  }
+
+  /**
+   * Mark cache entries as stale (for background revalidation)
+   */
+  async markAsStale(pattern) {
+    try {
+      console.log('[APICache] Marking cache as stale:', pattern);
+
+      // Mark memory cache as stale
+      for (const [key, entry] of this.cache.entries()) {
+        if (key.includes(pattern)) {
+          entry.stale = true;
+        }
+      }
+
+      // Mark IndexedDB cache as stale
+      const db = await getDB();
+      const allEntries = await db.getAll('apiCache');
+      
+      const stalePromises = allEntries
+        .filter(entry => entry.key.includes(pattern))
+        .map(async (entry) => {
+          entry.stale = true;
+          return db.put('apiCache', entry);
+        });
+      
+      await Promise.all(stalePromises);
+    } catch (error) {
+      console.error('[APICache] Error marking cache as stale:', error);
+    }
+  }
+
+  /**
+   * Make conditional request using ETag/Last-Modified
+   */
+  async makeConditionalRequest(url, options = {}, cachedEntry = null) {
+    const headers = { ...options.headers };
+
+    // Add conditional headers if we have cached data
+    if (cachedEntry) {
+      if (cachedEntry.etag) {
+        headers['If-None-Match'] = cachedEntry.etag;
+      }
+      if (cachedEntry.lastModified) {
+        headers['If-Modified-Since'] = cachedEntry.lastModified;
+      }
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers
+    });
+
+    return response;
+  }
+
+  /**
+   * Cached fetch with smart revalidation
    */
   async cachedFetch(url, options = {}, cacheOptions = {}) {
     const {
       ttl = this.defaultTTL,
       forceRefresh = false,
-      useETag = true,
-      staleWhileRevalidate = false
+      useConditional = true,
+      cacheKeyParams = {}
     } = cacheOptions;
 
-    const cacheKey = this.generateCacheKey(url, options.params);
-    
-    // Check for pending request to avoid duplicate calls
-    if (this.pendingRequests.has(cacheKey)) {
-      console.log(`[APICache] Waiting for pending request: ${cacheKey}`);
-      return this.pendingRequests.get(cacheKey);
-    }
+    const cacheKey = this.getCacheKey(url, cacheKeyParams);
 
-    // If not forcing refresh, try cache first
-    if (!forceRefresh) {
-      const cachedResult = await this.getCachedData(cacheKey, ttl);
-      
-      if (cachedResult) {
-        // If stale-while-revalidate, update in background
-        if (staleWhileRevalidate && !this.isCacheValid(cachedResult, ttl / 2)) {
-          console.log(`[APICache] Serving stale data and revalidating: ${cacheKey}`);
-          this.revalidateInBackground(url, options, cacheOptions, cacheKey);
+    try {
+      // Skip cache if force refresh
+      if (!forceRefresh) {
+        const cachedResponse = await this.getCachedResponse(cacheKey, ttl);
+        if (cachedResponse) {
+          // Background revalidation for stale-while-revalidate
+          this.revalidateInBackground(url, options, cacheKey, cachedResponse, { useConditional });
+          
+          return cachedResponse;
         }
+      }
+
+      // No valid cache, make network request
+      console.log('[APICache] Cache miss, making network request:', cacheKey);
+      
+      const cachedEntry = await this.getCachedResponse(cacheKey, Infinity); // Get any cached version for conditional request
+      
+      let response;
+      if (useConditional && cachedEntry) {
+        response = await this.makeConditionalRequest(url, options, cachedEntry);
         
-        return {
-          ...cachedResult.data,
-          _cached: true,
-          _source: cachedResult.source,
-          _timestamp: cachedResult.timestamp
-        };
-      }
-    }
-
-    // Make network request
-    const requestPromise = this.makeNetworkRequest(url, options, cacheKey, useETag);
-    this.pendingRequests.set(cacheKey, requestPromise);
-
-    try {
-      const result = await requestPromise;
-      return result;
-    } finally {
-      this.pendingRequests.delete(cacheKey);
-    }
-  }
-
-  /**
-   * Make network request with ETag support
-   */
-  async makeNetworkRequest(url, options, cacheKey, useETag = true) {
-    try {
-      console.log(`[APICache] Making network request: ${cacheKey}`);
-      
-      // Prepare request options
-      const requestOptions = {
-        method: options.method || 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers
-        }
-      };
-
-      // Add ETag header if available
-      if (useETag) {
-        const cachedResult = await this.getCachedData(cacheKey, Infinity);
-        if (cachedResult?.etag) {
-          requestOptions.headers['If-None-Match'] = cachedResult.etag;
-        }
-      }
-
-      // Add request body if present
-      if (options.body) {
-        requestOptions.body = JSON.stringify(options.body);
-      }
-
-      // Add query parameters to URL
-      let requestUrl = url;
-      if (options.params) {
-        const queryString = new URLSearchParams(options.params).toString();
-        requestUrl += (url.includes('?') ? '&' : '?') + queryString;
-      }
-
-      const response = await fetch(requestUrl, requestOptions);
-
-      // Handle 304 Not Modified
-      if (response.status === 304) {
-        console.log(`[APICache] Data not modified (304): ${cacheKey}`);
-        const cachedResult = await this.getCachedData(cacheKey, Infinity);
-        if (cachedResult) {
-          // Update timestamp but keep existing data
-          await this.setCachedData(cacheKey, cachedResult.data, cachedResult.etag);
+        // 304 Not Modified - use cached version
+        if (response.status === 304) {
+          console.log('[APICache] 304 Not Modified, using cached data:', cacheKey);
+          
+          // Refresh cache timestamp
+          await this.setCachedResponse(cacheKey, cachedEntry.data, cachedEntry);
+          
           return {
-            ...cachedResult.data,
-            _cached: true,
-            _source: 'not-modified',
-            _timestamp: cachedResult.timestamp
+            data: cachedEntry.data,
+            fromCache: true,
+            cacheType: 'conditional'
           };
         }
+      } else {
+        response = await fetch(url, options);
       }
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      const etag = response.headers.get('ETag');
-
+      
       // Cache the response
-      await this.setCachedData(cacheKey, data, etag);
+      const responseHeaders = {};
+      response.headers.forEach((value, key) => {
+        responseHeaders[key] = value;
+      });
+      
+      await this.setCachedResponse(cacheKey, data, responseHeaders);
 
-      console.log(`[APICache] Fresh data received: ${cacheKey}`);
       return {
-        ...data,
-        _cached: false,
-        _source: 'network',
-        _timestamp: Date.now()
+        data,
+        fromCache: false,
+        cacheType: 'network'
       };
 
     } catch (error) {
-      console.error(`[APICache] Network request failed: ${cacheKey}`, error);
+      console.error('[APICache] Network request failed:', error);
       
       // Try to return stale cache as fallback
-      const staleCache = await this.getCachedData(cacheKey, Infinity);
+      const staleCache = await this.getCachedResponse(cacheKey, Infinity);
       if (staleCache) {
-        console.log(`[APICache] Returning stale cache as fallback: ${cacheKey}`);
+        console.log('[APICache] Returning stale cache as fallback:', cacheKey);
         return {
-          ...staleCache.data,
-          _cached: true,
-          _source: 'stale-fallback',
-          _timestamp: staleCache.timestamp,
-          _error: error.message
+          data: staleCache.data,
+          fromCache: true,
+          cacheType: 'stale',
+          error: error.message
         };
       }
       
@@ -248,68 +290,60 @@ class APICacheManager {
   }
 
   /**
-   * Revalidate cache in background (for stale-while-revalidate)
+   * Background revalidation for stale-while-revalidate strategy
    */
-  async revalidateInBackground(url, options, cacheOptions, cacheKey) {
+  async revalidateInBackground(url, options, cacheKey, cachedResponse, revalidateOptions = {}) {
     try {
+      // Don't revalidate if already fresh
+      if (cachedResponse.cacheType === 'memory') return;
+      
+      console.log('[APICache] Background revalidation started:', cacheKey);
+      
       setTimeout(async () => {
-        console.log(`[APICache] Background revalidation: ${cacheKey}`);
-        await this.makeNetworkRequest(url, options, cacheKey, cacheOptions.useETag);
-      }, 0);
+        try {
+          const result = await this.cachedFetch(url, options, { 
+            forceRefresh: true,
+            ...revalidateOptions 
+          });
+          
+          if (!result.fromCache) {
+            console.log('[APICache] Background revalidation completed:', cacheKey);
+            
+            // Notify components about updated data
+            this.notifyDataUpdate(cacheKey, result.data);
+          }
+        } catch (error) {
+          console.error('[APICache] Background revalidation failed:', error);
+        }
+      }, 100); // Small delay to not block main request
     } catch (error) {
-      console.error('[APICache] Background revalidation failed:', error);
+      console.error('[APICache] Background revalidation error:', error);
     }
   }
 
   /**
-   * Invalidate cache for specific key or pattern
+   * Notify components about data updates
    */
-  async invalidateCache(pattern) {
-    try {
-      console.log(`[APICache] Invalidating cache pattern: ${pattern}`);
-      
-      // Clear from memory cache
-      if (typeof pattern === 'string') {
-        this.memoryCache.delete(pattern);
-      } else {
-        // Pattern matching for memory cache
-        for (const key of this.memoryCache.keys()) {
-          if (pattern.test(key)) {
-            this.memoryCache.delete(key);
-          }
-        }
-      }
-
-      // Clear from IndexedDB
-      const db = await getDB();
-      if (typeof pattern === 'string') {
-        await db.delete('cacheMetadata', pattern);
-      } else {
-        // Pattern matching would require getting all keys and filtering
-        // For now, we'll implement specific patterns
-        if (pattern.toString().includes('trades')) {
-          // Clear all trade-related cache
-          await db.clear('cacheMetadata');
-        }
-      }
-    } catch (error) {
-      console.error('[APICache] Error invalidating cache:', error);
-    }
+  notifyDataUpdate(cacheKey, newData) {
+    const event = new CustomEvent('apiCacheUpdate', {
+      detail: { cacheKey, data: newData }
+    });
+    window.dispatchEvent(event);
   }
 
   /**
    * Clear all cache
    */
-  async clearAllCache() {
+  async clearCache() {
     try {
-      console.log('[APICache] Clearing all cache');
-      
       // Clear memory cache
-      this.memoryCache.clear();
+      this.cache.clear();
       
       // Clear IndexedDB cache
       const db = await getDB();
-      await db.clear('cacheMetadata');
+      await db.clear('apiCache');
+      
+      console.log('[APICache] All cache cleared');
     } catch (error) {
       console.error('[APICache] Error clearing cache:', error);
     }
@@ -320,73 +354,56 @@ class APICacheManager {
    */
   async getCacheStats() {
     try {
-      const memorySize = this.memoryCache.size;
+      const memorySize = this.cache.size;
+      
       const db = await getDB();
-      const indexedDBItems = await db.getAll('cacheMetadata');
+      const dbEntries = await db.getAll('apiCache');
+      const dbSize = dbEntries.length;
       
-      const stats = {
-        memoryCache: {
-          size: memorySize,
-          keys: Array.from(this.memoryCache.keys())
-        },
-        indexedDBCache: {
-          size: indexedDBItems.length,
-          totalSize: JSON.stringify(indexedDBItems).length,
-          keys: indexedDBItems.map(item => item.key)
-        },
-        pendingRequests: this.pendingRequests.size
+      const totalSize = memorySize + dbSize;
+      const oldestEntry = dbEntries.reduce((oldest, entry) => 
+        !oldest || entry.timestamp < oldest.timestamp ? entry : oldest, null);
+      const newestEntry = dbEntries.reduce((newest, entry) => 
+        !newest || entry.timestamp > newest.timestamp ? entry : newest, null);
+      
+      return {
+        memorySize,
+        dbSize,
+        totalSize,
+        oldestEntry: oldestEntry ? new Date(oldestEntry.timestamp) : null,
+        newestEntry: newestEntry ? new Date(newestEntry.timestamp) : null,
+        entries: dbEntries.map(entry => ({
+          key: entry.key,
+          timestamp: new Date(entry.timestamp),
+          stale: entry.stale,
+          hasETag: !!entry.etag
+        }))
       };
-      
-      return stats;
     } catch (error) {
       console.error('[APICache] Error getting cache stats:', error);
       return null;
     }
   }
-
-  /**
-   * Preload data into cache
-   */
-  async preloadCache(url, options = {}, cacheOptions = {}) {
-    try {
-      console.log(`[APICache] Preloading cache: ${url}`);
-      await this.cachedFetch(url, options, { ...cacheOptions, forceRefresh: true });
-    } catch (error) {
-      console.error('[APICache] Error preloading cache:', error);
-    }
-  }
 }
 
-// Singleton instance
-let cacheManagerInstance = null;
+// Create global instance
+const apiCache = new APICacheManager();
 
-export const getCacheManager = () => {
-  if (!cacheManagerInstance) {
-    cacheManagerInstance = new APICacheManager();
-  }
-  return cacheManagerInstance;
-};
+// Export convenience methods
+export const cachedFetch = (url, options, cacheOptions) => 
+  apiCache.cachedFetch(url, options, cacheOptions);
 
-// Convenience functions
-export const cachedFetch = async (url, options, cacheOptions) => {
-  const manager = getCacheManager();
-  return manager.cachedFetch(url, options, cacheOptions);
-};
+export const invalidateCache = (pattern) => 
+  apiCache.invalidateCache(pattern);
 
-export const invalidateCache = async (pattern) => {
-  const manager = getCacheManager();
-  return manager.invalidateCache(pattern);
-};
+export const clearCache = () => 
+  apiCache.clearCache();
 
-export const clearAllCache = async () => {
-  const manager = getCacheManager();
-  return manager.clearAllCache();
-};
+export const getCacheStats = () => 
+  apiCache.getCacheStats();
 
-export const getCacheStats = async () => {
-  const manager = getCacheManager();
-  return manager.getCacheStats();
-};
+export const markAsStale = (pattern) => 
+  apiCache.markAsStale(pattern);
 
-// Export the class for direct usage
-export default APICacheManager; 
+// Export the manager class
+export default apiCache; 

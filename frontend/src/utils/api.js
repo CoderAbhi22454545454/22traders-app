@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { cachedFetch, invalidateCache } from './apiCache';
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -259,9 +260,47 @@ const calculateRecoveryFactor = (trades, drawdownData) => {
 
 // Trade API functions
 export const tradesAPI = {
-  // Get all trades with optional filters
-  getAllTrades: async (params = {}) => {
+  // Get all trades with optional filters and caching support
+  getAllTrades: async (params = {}, useCache = true, ttl = 5 * 60 * 1000) => {
     try {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+      const url = `${API_BASE_URL}/api/trades`;
+      
+      if (useCache) {
+        try {
+          console.log('[TradesAPI] Using cached fetch for getAllTrades with params:', params);
+          
+          // Build URL with query parameters for GET request
+          const urlWithParams = new URL(url);
+          Object.entries(params).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+              urlWithParams.searchParams.append(key, value);
+            }
+          });
+          
+          const cacheOptions = {
+            ttl: ttl, // 5 minutes default TTL
+            useConditional: true,
+            // Include params in cache key for unique caching per parameter set
+            cacheKeyParams: params
+          };
+          
+          const result = await cachedFetch(urlWithParams.toString(), {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+            // Removed body - GET requests cannot have bodies
+          }, cacheOptions);
+          
+          console.log(`[TradesAPI] Cache ${result.fromCache ? 'hit' : 'miss'} (${result.cacheType})`);
+          return result.data;
+        } catch (error) {
+          console.error('[TradesAPI] Cached fetch failed, falling back to direct API call:', error);
+        }
+      }
+
+      // Fallback to direct API call
       const response = await api.get('/trades', { params });
       return response.data;
     } catch (error) {
@@ -300,6 +339,11 @@ export const tradesAPI = {
           'Content-Type': 'multipart/form-data',
         },
       });
+
+      // Invalidate trades cache after creating a new trade
+      await invalidateCache('/api/trades');
+      console.log('[TradesAPI] Cache invalidated after creating trade');
+
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -370,9 +414,33 @@ export const tradesAPI = {
     }
   },
 
-  // Get single trade by ID
-  getTradeById: async (tradeId) => {
+  // Get single trade by ID with caching support
+  getTradeById: async (tradeId, useCache = true) => {
     try {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+      const url = `${API_BASE_URL}/api/trades/${tradeId}`;
+      
+      if (useCache) {
+        try {
+          console.log('[TradesAPI] Using cached fetch for getTradeById');
+          const result = await cachedFetch(url, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }, {
+            ttl: 10 * 60 * 1000, // 10 minutes TTL for individual trades
+            useConditional: true
+          });
+          
+          console.log(`[TradesAPI] Cache ${result.fromCache ? 'hit' : 'miss'} for trade ${tradeId}`);
+          return result.data;
+        } catch (error) {
+          console.error('[TradesAPI] Cached fetch failed for trade, falling back:', error);
+        }
+      }
+
+      // Fallback to direct API call
       const response = await api.get(`/trades/${tradeId}`);
       return response.data;
     } catch (error) {
@@ -398,6 +466,11 @@ export const tradesAPI = {
           'Content-Type': 'multipart/form-data',
         },
       });
+
+      // Invalidate trades cache after updating a trade
+      await invalidateCache('/api/trades');
+      console.log('[TradesAPI] Cache invalidated after updating trade');
+
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -408,6 +481,11 @@ export const tradesAPI = {
   deleteTrade: async (tradeId) => {
     try {
       const response = await api.delete(`/trades/${tradeId}`);
+
+      // Invalidate trades cache after deleting a trade
+      await invalidateCache('/api/trades');
+      console.log('[TradesAPI] Cache invalidated after deleting trade');
+
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -418,9 +496,34 @@ export const tradesAPI = {
   deleteScreenshot: async (tradeId) => {
     try {
       const response = await api.delete(`/trades/${tradeId}/screenshot`);
+
+      // Invalidate trades cache after screenshot deletion
+      await invalidateCache('/api/trades');
+      console.log('[TradesAPI] Cache invalidated after deleting screenshot');
+
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
+    }
+  },
+
+  // Cache management utilities
+  clearTradesCache: async () => {
+    await invalidateCache('/api/trades');
+    console.log('[TradesAPI] Trades cache cleared manually');
+  },
+
+  refreshTradesCache: async (userId) => {
+    try {
+      // Force refresh the most common trades query
+      await tradesAPI.getAllTrades({ 
+        userId, 
+        page: 1, 
+        limit: 1000 
+      }, false); // Force refresh by disabling cache
+      console.log('[TradesAPI] Trades cache refreshed');
+    } catch (error) {
+      console.error('[TradesAPI] Error refreshing cache:', error);
     }
   }
 };

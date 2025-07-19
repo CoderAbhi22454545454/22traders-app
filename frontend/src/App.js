@@ -63,7 +63,7 @@ const Navigation = ({ user, onLogout }) => {
             </div>
           </div>
           
-                      <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4">
             {/* PWA Status */}
             <PWAStatus userId={user.id} />
             

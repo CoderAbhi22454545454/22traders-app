@@ -17,7 +17,8 @@ import {
   ClockIcon,
   StarIcon,
   ArrowTrendingUpIcon,
-  ArrowTrendingDownIcon
+  ArrowTrendingDownIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
 
 const Trades = ({ userId }) => {
@@ -74,20 +75,23 @@ const Trades = ({ userId }) => {
     }
   }, [filteredTrades, tradesPerPage, currentPage]);
 
-  const fetchAllTrades = async () => {
-    console.log('📊 Fetching all trades...');
+  const fetchAllTrades = async (forceRefresh = false) => {
+    console.log('📊 Fetching all trades with cache...', 'forceRefresh:', forceRefresh);
     setLoading(true);
     setError(null);
     
     try {
+      // Use caching unless force refresh is requested
       const tradesData = await tradesAPI.getAllTrades({
         userId,
         page: 1,
         limit: 1000
-      });
+      }, !forceRefresh, 10 * 60 * 1000); // 10 minute cache TTL, disable cache if force refresh
       
       console.log('📋 All trades fetched:', {
         tradesCount: tradesData?.trades?.length,
+        fromCache: tradesData.fromCache || false,
+        cacheType: tradesData.cacheType || 'network',
         firstTrade: tradesData?.trades?.[0]
       });
       
@@ -100,6 +104,23 @@ const Trades = ({ userId }) => {
       setLoading(false);
     }
   };
+
+  // Listen for cache updates
+  useEffect(() => {
+    const handleCacheUpdate = (event) => {
+      const { cacheKey, data } = event.detail;
+      console.log('[Trades] Cache update received:', cacheKey);
+      
+      // Check if this cache update affects our trades
+      if (cacheKey.includes('/api/trades') && data?.trades) {
+        console.log('[Trades] Updating trades from cache update');
+        setAllTrades(data.trades);
+      }
+    };
+
+    window.addEventListener('apiCacheUpdate', handleCacheUpdate);
+    return () => window.removeEventListener('apiCacheUpdate', handleCacheUpdate);
+  }, []);
 
   const applyFilters = () => {
     console.log('🔍 Applying filters to trades:', filters);
@@ -482,6 +503,17 @@ const Trades = ({ userId }) => {
                     Active
                   </span>
                 )}
+              </button>
+
+              {/* Refresh Button */}
+              <button
+                onClick={() => fetchAllTrades(true)}
+                disabled={loading}
+                className="flex items-center px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50"
+                title="Refresh trades (bypass cache)"
+              >
+                <ArrowPathIcon className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
               </button>
 
               {/* Add Trade Button */}

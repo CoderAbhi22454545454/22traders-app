@@ -47,7 +47,7 @@ self.addEventListener('install', (event) => {
         self.skipWaiting();
       } catch (error) {
         console.error('[SW] Cache addAll failed:', error);
-      }
+          }
     })()
   );
 });
@@ -65,10 +65,10 @@ self.addEventListener('activate', (event) => {
                 cacheName !== DATA_CACHE_NAME && 
                 cacheName !== RUNTIME_CACHE_NAME) {
               console.log('[SW] Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
-            }
-          })
-        );
+            return caches.delete(cacheName);
+          }
+        })
+      );
         
         // Take control of all clients immediately
         await clients.claim();
@@ -334,7 +334,7 @@ self.addEventListener('push', (event) => {
   } catch (error) {
     console.error('[SW] Failed to parse push data:', error);
   }
-  
+
   event.waitUntil(
     self.registration.showNotification(
       notificationData.title || 'Trade Journal',

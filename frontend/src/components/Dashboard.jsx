@@ -23,7 +23,8 @@ import {
   FireIcon,
   BoltIcon,
   FunnelIcon,
-  XMarkIcon
+  XMarkIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
 
 // Helper component for instrument icons
@@ -120,23 +121,25 @@ const Dashboard = ({ userId }) => {
     }
   }, [currentPage, filteredTrades, tradesPerPage, totalPages]);
 
-  // Fetch all data once (no filtering parameters)
-  const fetchAllData = async () => {
-    console.log('📊 Starting fetchAllData for userId:', userId);
+  // Fetch all data once (no filtering parameters) with intelligent caching
+  const fetchAllData = async (forceRefresh = false) => {
+    console.log('📊 Starting fetchAllData for userId:', userId, 'forceRefresh:', forceRefresh);
     
     setLoading(true);
     try {
-      // Fetch all trades without any filtering
+      // Fetch all trades with caching enabled (unless force refresh)
       const tradesData = await tradesAPI.getAllTrades({
         userId,
         page: 1,
         limit: 1000 // Get a large number of trades
-      });
+      }, !forceRefresh, 10 * 60 * 1000); // 10 minute cache TTL, disable cache if force refresh
       
       console.log('📋 All Trades Fetched:', {
         tradesCount: tradesData?.trades?.length,
         totalPages: tradesData?.totalPages,
         currentPage: tradesData?.currentPage,
+        fromCache: tradesData.fromCache || false,
+        cacheType: tradesData.cacheType || 'network',
         firstTrade: tradesData?.trades?.[0],
         lastTrade: tradesData?.trades?.[tradesData?.trades?.length - 1]
       });
@@ -359,8 +362,25 @@ const Dashboard = ({ userId }) => {
   };
 
   const handleTradeAdded = () => {
-    fetchAllData(); // Refresh all data
+    fetchAllData(true); // Force refresh all data after adding trade
   };
+
+  // Listen for cache updates
+  useEffect(() => {
+    const handleCacheUpdate = (event) => {
+      const { cacheKey, data } = event.detail;
+      console.log('[Dashboard] Cache update received:', cacheKey);
+      
+      // Check if this cache update affects our trades
+      if (cacheKey.includes('/api/trades') && data?.trades) {
+        console.log('[Dashboard] Updating trades from cache update');
+        setAllTrades(data.trades);
+      }
+    };
+
+    window.addEventListener('apiCacheUpdate', handleCacheUpdate);
+    return () => window.removeEventListener('apiCacheUpdate', handleCacheUpdate);
+  }, []);
 
   // Handle filter application
   const applyFilters = () => {
@@ -608,6 +628,15 @@ const Dashboard = ({ userId }) => {
                 <FunnelIcon className="h-4 w-4 mr-1" />
                 Filters
               </button>
+
+              <button
+                onClick={() => fetchAllData(true)}
+                className="flex items-center px-3 py-1.5 text-sm rounded border border-gray-300 bg-white hover:bg-gray-50"
+                title="Refresh data (bypass cache)"
+              >
+                <ArrowPathIcon className="h-4 w-4 mr-1" />
+                Refresh
+              </button>
               
               <button
                 onClick={() => setIsModalOpen(true)}
@@ -673,15 +702,23 @@ const Dashboard = ({ userId }) => {
             </div>
           )}
           
-          {/* Filter Summary */}
+          {/* Filter Summary with Cache Status */}
           {stats && (
             <div className="mt-3 flex items-center justify-between text-sm">
               <span className="text-gray-600">
                 {getFilterDescription()} • {stats.overview.totalTrades} trades • {formatCurrency(stats.overview.totalPnL)} P&L
               </span>
-              <span className="text-gray-600">
-                Win Rate: {stats.overview.winRate}%
-              </span>
+              <div className="flex items-center space-x-4">
+                <span className="text-gray-600">
+                  Win Rate: {stats.overview.winRate}%
+                </span>
+                {/* Simple cache indicator - just shows when data is from cache */}
+                {typeof window !== 'undefined' && window.localStorage.getItem('showCacheStatus') === 'true' && (
+                  <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                    📊 Cached Data
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
