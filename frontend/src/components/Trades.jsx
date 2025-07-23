@@ -18,7 +18,11 @@ import {
   StarIcon,
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  Squares2X2Icon,
+  BookOpenIcon
 } from '@heroicons/react/24/outline';
 
 const Trades = ({ userId }) => {
@@ -45,7 +49,8 @@ const Trades = ({ userId }) => {
   });
   
   // View state
-  const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'table'
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'notebook'
+  const [notebookPage, setNotebookPage] = useState(1); // Current page in notebook view
 
   // Fetch all trades once on component mount
   useEffect(() => {
@@ -72,8 +77,38 @@ const Trades = ({ userId }) => {
       if (currentPage > totalPagesCount) {
         setCurrentPage(1);
       }
+      
+      // Reset notebook page if it exceeds available trades
+      if (notebookPage > filteredTrades.length) {
+        setNotebookPage(1);
+      }
     }
-  }, [filteredTrades, tradesPerPage, currentPage]);
+  }, [filteredTrades, tradesPerPage, currentPage, notebookPage]);
+
+  // Reset notebook page when switching to notebook view or when filters change
+  useEffect(() => {
+    if (viewMode === 'notebook' && filteredTrades.length > 0) {
+      setNotebookPage(1);
+    }
+  }, [viewMode, filters]);
+
+  // Keyboard navigation for notebook view
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (viewMode === 'notebook' && filteredTrades.length > 0) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          goToPreviousPage();
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          goToNextPage();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [viewMode, notebookPage, filteredTrades.length]);
 
   const fetchAllTrades = async (forceRefresh = false) => {
     console.log('📊 Fetching all trades with cache...', 'forceRefresh:', forceRefresh);
@@ -254,6 +289,29 @@ const Trades = ({ userId }) => {
     const startIndex = (currentPage - 1) * tradesPerPage;
     const endIndex = startIndex + tradesPerPage;
     return filteredTrades.slice(startIndex, endIndex);
+  };
+
+  // Notebook view helpers
+  const getCurrentNotebookTrade = () => {
+    return filteredTrades[notebookPage - 1];
+  };
+
+  const goToNotebookPage = (pageNum) => {
+    if (pageNum >= 1 && pageNum <= filteredTrades.length) {
+      setNotebookPage(pageNum);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (notebookPage > 1) {
+      setNotebookPage(notebookPage - 1);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (notebookPage < filteredTrades.length) {
+      setNotebookPage(notebookPage + 1);
+    }
   };
 
   const PaginationControls = () => {
@@ -438,6 +496,613 @@ const Trades = ({ userId }) => {
     );
   };
 
+  const NotebookView = () => {
+    const currentTrade = getCurrentNotebookTrade();
+    
+    if (!currentTrade) {
+      return (
+        <div className="text-center py-12">
+          <ChartBarIcon className="mx-auto h-16 w-16 text-gray-400" />
+          <h3 className="mt-4 text-lg font-medium text-gray-900">No trades to display</h3>
+        </div>
+      );
+    }
+
+    const isProfitable = currentTrade.pnl >= 0;
+    const resultColor = currentTrade.result === 'win' ? 'text-green-600' : 
+                       currentTrade.result === 'loss' ? 'text-red-600' : 'text-yellow-600';
+
+    return (
+      <div className="notebook-container ">
+        {/* Notebook Page - Expanded for full details */}
+        <div className="notebook-page bg-white border border-gray-200 rounded-lg mx-auto max-w-6xl min-h-[800px] py-4 px-8 relative transform transition-all duration-300 hover:shadow-3xl" style={{
+          background: 'linear-gradient(135deg, #ffffff 0%, #fafafa 100%)'
+        }}>
+          {/* Notebook Lines - Removed */}
+
+          {/* Trade Content */}
+          <div className="relative z-10">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-4">
+                <div className={`p-3 rounded-full ${isProfitable ? 'bg-green-100' : 'bg-red-100'}`}>
+                  {isProfitable ? (
+                    <ArrowTrendingUpIcon className="h-8 w-8 text-green-600" />
+                  ) : (
+                    <ArrowTrendingDownIcon className="h-8 w-8 text-red-600" />
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                    <InstrumentIcon instrument={currentTrade.instrument} />
+                    {currentTrade.tradePair && currentTrade.tradePair !== currentTrade.instrument && (
+                      <span className="text-lg text-gray-600 ml-2">({currentTrade.tradePair})</span>
+                    )}
+                  </h2>
+                  <p className="text-lg text-gray-600">
+                    {new Date(currentTrade.date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={`text-3xl font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(currentTrade.pnl)}
+                </div>
+                <div className={`text-lg font-medium ${resultColor}`}>
+                  {currentTrade.tradeOutcome || currentTrade.result?.toUpperCase() || 'N/A'}
+                </div>
+              </div>
+            </div>
+
+            {/* Trade Summary Cards */}
+            {/* <div className="grid grid-cols-4 gap-3 mb-6 p-0 bg-gradient-to-r from-gray-50 to-white rounded-lg border">
+              <div className="text-center">
+                <div className="text-lg font-bold text-gray-900">
+                  {currentTrade.entryPrice || 'N/A'}
+                </div>
+                <div className="text-xs text-gray-500">Entry Price</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-gray-900">
+                  {currentTrade.exitPrice || 'N/A'}
+                </div>
+                <div className="text-xs text-gray-500">Exit Price</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-gray-900">
+                  {currentTrade.riskReward || 'N/A'}
+                </div>
+                <div className="text-xs text-gray-500">Risk/Reward</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-yellow-600">
+                  {currentTrade.executionScore || 'N/A'}/10
+                </div>
+                <div className="text-xs text-gray-500">Execution Score</div>
+              </div>
+            </div> */}
+
+            {/* Comprehensive Trade Details */}
+            <div className="space-y-6 mb-6">
+              {/* Primary Trade Info */}
+              <div className="grid grid-cols-3 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3 bg-gradient-to-r from-gray-50 to white">
+                    <ArrowUpIcon className={`h-6 w-6 ${currentTrade.direction === 'Long' ? 'text-blue-500' : 'text-purple-500'}`} />
+                    <div>
+                      <div className="text-sm text-gray-500">Direction & Position</div>
+                      <div className="text-lg font-semibold">
+                        {currentTrade.direction} • {currentTrade.lotSize} lots
+                        {currentTrade.positionSize && (
+                          <div className="text-sm text-gray-600">Size: {currentTrade.positionSize}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3 bg-gradient-to-r from-gray-50 to-white ">
+                    <ChartBarIcon className="h-6 w-6 text-gray-400" />
+                    <div>
+                      <div className="text-sm text-gray-500">Strategy</div>
+                      <div className="text-lg font-semibold">
+                        {currentTrade.strategy || 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+
+                 
+
+                  {currentTrade.tradePair && (
+                  <div className="flex items-center space-x-3 bg-gradient-to-r from-gray-50 to white">
+                      <div className="h-6 w-6 bg-purple-100 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-bold text-purple-600">P</span>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Trade Pair</div>
+                        <div className="text-lg font-semibold">{currentTrade.tradePair}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                <div className="flex items-center space-x-3 bg-gradient-to-r from-gray-50 to white">
+                <ClockIcon className="h-6 w-6 text-gray-400" />
+                    <div>
+                      <div className="text-sm text-gray-500">Session</div>
+                      <div className="text-lg font-semibold">
+                        {currentTrade.session || 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3 bg-gradient-to-r from-gray-50 to white">
+                    <BanknotesIcon className="h-6 w-6 text-gray-400" />
+                    <div>
+                      <div className="text-sm text-gray-500">Trade Number</div>
+                      <div className="text-lg font-semibold">
+                        #{currentTrade.tradeNumber || 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {currentTrade.tradeDuration && (
+                  <div className="flex items-center space-x-3 bg-gradient-to-r from-gray-50 to white">
+                      <div className="h-6 w-6 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-bold text-indigo-600">D</span>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Trade Duration</div>
+                        <div className="text-lg font-semibold">
+                          {currentTrade.tradeDuration}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentTrade.riskReward && (
+                  <div className="flex items-center space-x-3 bg-gradient-to-r from-gray-50 to white">
+                      <div className="h-6 w-6 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-bold text-yellow-600">R</span>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Risk/Reward</div>
+                        <div className="text-lg font-semibold">
+                          {currentTrade.riskReward}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  {currentTrade.entryPrice && (
+                  <div className="flex items-center space-x-3 bg-gradient-to-r from-gray-50 to white">
+                      <div className="h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-bold text-blue-600">E</span>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Entry Price</div>
+                        <div className="text-lg font-semibold">
+                          {currentTrade.entryPrice}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentTrade.exitPrice && (
+                  <div className="flex items-center space-x-3 bg-gradient-to-r from-gray-50 to white">
+                      <div className="h-6 w-6 bg-red-100 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-bold text-red-600">X</span>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Exit Price</div>
+                        <div className="text-lg font-semibold">
+                          {currentTrade.exitPrice}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentTrade.stopLoss && (
+                  <div className="flex items-center space-x-3 bg-gradient-to-r from-gray-50 to white">
+                      <div className="h-6 w-6 bg-orange-100 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-bold text-orange-600">SL</span>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Stop Loss</div>
+                        <div className="text-lg font-semibold">
+                          {currentTrade.stopLoss}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentTrade.takeProfit && (
+                  <div className="flex items-center space-x-3 bg-gradient-to-r from-gray-50 to white">
+                      <div className="h-6 w-6 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-bold text-green-600">TP</span>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Take Profit</div>
+                        <div className="text-lg font-semibold">
+                          {currentTrade.takeProfit}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Trade Outcome Section */}
+              {/* {currentTrade.tradeOutcome && (
+                <div className="border-t border-gray-200 pt-4">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className={`p-2 rounded-full ${
+                      currentTrade.tradeOutcome === 'Win' ? 'bg-green-100' :
+                      currentTrade.tradeOutcome === 'Loss' ? 'bg-red-100' : 'bg-yellow-100'
+                    }`}>
+                      <span className={`text-lg font-bold ${
+                        currentTrade.tradeOutcome === 'Win' ? 'text-green-600' :
+                        currentTrade.tradeOutcome === 'Loss' ? 'text-red-600' : 'text-yellow-600'
+                      }`}>
+                        {currentTrade.tradeOutcome === 'Win' ? '✓' : 
+                         currentTrade.tradeOutcome === 'Loss' ? '✗' : '~'}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500">Trade Outcome</div>
+                      <div className={`text-lg font-bold ${
+                        currentTrade.tradeOutcome === 'Win' ? 'text-green-600' :
+                        currentTrade.tradeOutcome === 'Loss' ? 'text-red-600' : 'text-yellow-600'
+                      }`}>
+                        {currentTrade.tradeOutcome}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )} */}
+            </div>
+
+            {/* Reason for Trade Section */}
+            {currentTrade.reasonForTrade && (
+              <div className="mb-5 border-t border-gray-200 pt-5">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <ChartBarIcon className="h-4 w-4 mr-2 text-blue-600" />
+                  Reason for Trade
+                </h3>
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-400 p-4 rounded-lg shadow-sm">
+                  <p className="text-gray-800 leading-relaxed whitespace-pre-wrap text-sm">
+                    {currentTrade.reasonForTrade}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Emotions Section */}
+            {currentTrade.emotions && (
+              <div className="mb-5 border-t border-gray-200 pt-5">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <div className="h-4 w-4 mr-2 text-purple-600">❤️</div>
+                  Emotions & Psychology
+                </h3>
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-l-4 border-purple-400 p-4 rounded-lg shadow-sm">
+                  <p className="text-gray-800 leading-relaxed whitespace-pre-wrap text-sm">
+                    {currentTrade.emotions}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Notes Section */}
+            {currentTrade.notes && (
+              <div className="mb-5 border-t border-gray-200 pt-5">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <PencilIcon className="h-4 w-4 mr-2 text-gray-600" />
+                  Trade Notes & Analysis
+                </h3>
+                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow-sm">
+                  <p className="text-gray-800 leading-relaxed whitespace-pre-wrap text-sm">
+                    {currentTrade.notes}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Additional Notes Section */}
+            {currentTrade.additionalNotes && (
+              <div className="mb-5 border-t border-gray-200 pt-5">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <div className="h-4 w-4 mr-2 text-gray-600">📝</div>
+                  Additional Notes
+                </h3>
+                <div className="bg-gradient-to-r from-gray-50 to-slate-50 border-l-4 border-gray-400 p-4 rounded-lg shadow-sm">
+                  <p className="text-gray-800 leading-relaxed whitespace-pre-wrap text-sm">
+                    {currentTrade.additionalNotes}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Lesson Learned Section */}
+            {currentTrade.lessonLearned && (
+              <div className="mb-5 border-t border-gray-200 pt-5">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <div className="h-4 w-4 mr-2 text-green-600">🎓</div>
+                  Lessons Learned
+                </h3>
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 p-4 rounded-lg shadow-sm">
+                  <p className="text-gray-800 leading-relaxed whitespace-pre-wrap text-sm">
+                    {currentTrade.lessonLearned}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Screenshot Section */}
+            {currentTrade.screenshotUrl && (
+              <div className="mb-5 border-t border-gray-200 pt-5">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <EyeIcon className="h-4 w-4 mr-2 text-gray-600" />
+                  Trade Chart & Screenshot
+                </h3>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <img
+                    src={currentTrade.screenshotUrl}
+                    alt="Trade screenshot"
+                    className="w-full max-h-60 object-contain rounded-lg cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                    onClick={() => {
+                      // Open fullscreen view
+                      const modal = document.createElement('div');
+                      modal.className = 'fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 backdrop-blur-sm';
+                      modal.onclick = () => modal.remove();
+                      
+                      const img = document.createElement('img');
+                      img.src = currentTrade.screenshotUrl;
+                      img.className = 'max-w-[95vw] max-h-[95vh] object-contain rounded-lg shadow-2xl';
+                      
+                      const closeButton = document.createElement('button');
+                      closeButton.innerHTML = '×';
+                      closeButton.className = 'absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition-colors';
+                      closeButton.onclick = () => modal.remove();
+                      
+                      modal.appendChild(img);
+                      modal.appendChild(closeButton);
+                      document.body.appendChild(modal);
+                    }}
+                  />
+                  <div className="mt-3 text-center text-xs text-gray-500">
+                    Click to view in fullscreen
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Quick Actions */}
+            <div className="mt-6 flex items-center space-x-4">
+              <Link
+                to={`/trade/${currentTrade._id}`}
+                className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+              >
+                <PencilIcon className="h-4 w-4 mr-2" />
+                Edit Trade
+              </Link>
+              <div className="text-xs text-gray-500">
+                Trade ID: {currentTrade._id?.slice(-8) || 'N/A'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+                 {/* Navigation Controls */}
+         <div className="flex items-center justify-between mt-6 max-w-6xl mx-auto">
+           <button
+             onClick={goToPreviousPage}
+             disabled={notebookPage === 1}
+             className={`flex items-center px-6 py-3 rounded-lg border transition-all duration-200 ${
+               notebookPage === 1 
+                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' 
+                 : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5'
+             }`}
+           >
+             <ChevronLeftIcon className="h-5 w-5 mr-2" />
+             Previous
+           </button>
+
+           <div className="text-center">
+             <div className="text-lg font-medium text-gray-900">
+               Page {notebookPage} of {filteredTrades.length}
+             </div>
+             <div className="text-sm text-gray-500">
+               {currentTrade.instrument} • {new Date(currentTrade.date).toLocaleDateString()}
+             </div>
+             <div className="text-xs text-gray-400 mt-1">
+               Use ← → arrow keys to navigate
+             </div>
+           </div>
+
+           <button
+             onClick={goToNextPage}
+             disabled={notebookPage === filteredTrades.length}
+             className={`flex items-center px-6 py-3 rounded-lg border transition-all duration-200 ${
+               notebookPage === filteredTrades.length 
+                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' 
+                 : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5'
+             }`}
+           >
+             Next
+             <ChevronRightIcon className="h-5 w-5 ml-2" />
+           </button>
+         </div>
+
+                 {/* Enhanced Page Preview Strip */}
+         <div className="mt-12 max-w-6xl mx-auto">
+           <div className="bg-gradient-to-r from-gray-50 to-white rounded-xl shadow-lg border p-6">
+             <div className="flex items-center justify-between mb-4">
+               <h4 className="text-lg font-semibold text-gray-800 flex items-center">
+                 <BookOpenIcon className="h-5 w-5 mr-2 text-blue-600" />
+                 Trade Journal Pages
+               </h4>
+               <div className="text-sm text-gray-500">
+                 {filteredTrades.length} {filteredTrades.length === 1 ? 'trade' : 'trades'} total
+               </div>
+             </div>
+             <div className="flex space-x-3 overflow-x-auto pb-3 pr-2 p-2"
+                  style={{ 
+                    scrollbarWidth: 'thin', 
+                    scrollbarColor: '#9ca3af #f3f4f6',
+                    scrollBehavior: 'smooth'
+                  }}>
+              {filteredTrades.map((trade, index) => {
+                const pageNum = index + 1;
+                const isCurrentPage = pageNum === notebookPage;
+                const tradePnl = trade.pnl >= 0;
+                
+                return (
+                  <div
+                    key={trade._id}
+                    className="relative group flex-shrink-0"
+                  >
+                                                              <button
+                       onClick={() => goToNotebookPage(pageNum)}
+                       className={`w-20 h-24 border-2 rounded-lg transition-all duration-200 ${
+                         isCurrentPage 
+                           ? 'border-blue-500 shadow-lg scale-110 ring-2 ring-blue-200' 
+                           : 'border-gray-200 hover:border-gray-300 hover:shadow-md hover:scale-105'
+                       } ${tradePnl ? 'bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-150' : 'bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-150'}`}
+                       title={`Page ${pageNum}: ${trade.instrument} - ${formatCurrency(trade.pnl)}`}
+                     >
+                       <div className="p-2 h-full flex flex-col justify-between">
+                         <div className="flex items-center justify-between w-full">
+                           <div className="text-xs font-bold text-gray-700 bg-white rounded px-1">
+                             {pageNum}
+                           </div>
+                           <div className={`text-xs font-bold ${tradePnl ? 'text-green-600' : 'text-red-600'}`}>
+                             {trade.result === 'win' ? '✓' : trade.result === 'loss' ? '✗' : '~'}
+                           </div>
+                         </div>
+                         
+                         <div className="text-center flex-1 flex flex-col justify-center">
+                           <div className="text-xs font-bold text-gray-800 truncate mb-1">
+                             {trade.instrument}
+                           </div>
+                           <div className="text-xs text-gray-600 mb-1">
+                             {new Date(trade.date).toLocaleDateString('en-US', { 
+                               month: 'short', 
+                               day: 'numeric' 
+                             })}
+                           </div>
+                                                       <div className={`text-xs font-bold ${tradePnl ? 'text-green-600' : 'text-red-600'}`}>
+                             {Math.abs(trade.pnl) >= 1000 
+                               ? `${trade.pnl >= 0 ? '+' : '-'}$${(Math.abs(trade.pnl) / 1000).toFixed(1)}k`
+                               : `${trade.pnl >= 0 ? '+' : ''}${formatCurrency(trade.pnl)}`}
+                           </div>
+                         </div>
+                       </div>
+                     </button>
+                    
+                                         {/* Enhanced Tooltip */}
+                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-20">
+                       <div className="bg-gray-900 text-white text-sm rounded-lg py-4 px-5 shadow-2xl border border-gray-700" style={{ minWidth: '220px' }}>
+                         <div className="flex items-center justify-between mb-3">
+                           <div className="font-bold text-white text-lg">
+                             {trade.instrument}
+                             {trade.tradePair && trade.tradePair !== trade.instrument && (
+                               <div className="text-xs text-gray-300">{trade.tradePair}</div>
+                             )}
+                           </div>
+                           <div className={`text-xs px-2 py-1 rounded-full font-bold ${
+                             (trade.tradeOutcome === 'Win' || trade.result === 'win') ? 'bg-green-600 text-white' : 
+                             (trade.tradeOutcome === 'Loss' || trade.result === 'loss') ? 'bg-red-600 text-white' : 'bg-yellow-600 text-white'
+                           }`}>
+                             {trade.tradeOutcome || trade.result?.toUpperCase() || 'N/A'}
+                           </div>
+                         </div>
+                         
+                         <div className="space-y-2">
+                           <div className="flex justify-between">
+                             <span className="text-gray-300">Date:</span>
+                             <span className="text-white font-medium">
+                               {new Date(trade.date).toLocaleDateString('en-US', {
+                                 month: 'short',
+                                 day: 'numeric',
+                                 year: '2-digit'
+                               })}
+                             </span>
+                           </div>
+                           
+                           <div className="flex justify-between">
+                             <span className="text-gray-300">P&L:</span>
+                             <span className={`font-bold ${tradePnl ? 'text-green-400' : 'text-red-400'}`}>
+                               {formatCurrency(trade.pnl)}
+                             </span>
+                           </div>
+                           
+                           <div className="flex justify-between">
+                             <span className="text-gray-300">Position:</span>
+                             <span className="text-white font-medium">
+                               {trade.direction} • {trade.lotSize} lots
+                             </span>
+                           </div>
+                           
+                           {trade.strategy && (
+                             <div className="flex justify-between">
+                               <span className="text-gray-300">Strategy:</span>
+                               <span className="text-white font-medium truncate ml-2" style={{ maxWidth: '100px' }}>
+                                 {trade.strategy}
+                               </span>
+                             </div>
+                           )}
+                           
+                           {trade.session && (
+                             <div className="flex justify-between">
+                               <span className="text-gray-300">Session:</span>
+                               <span className="text-white font-medium">
+                                 {trade.session}
+                               </span>
+                             </div>
+                           )}
+                           
+                           {trade.riskReward && (
+                             <div className="flex justify-between">
+                               <span className="text-gray-300">R:R:</span>
+                               <span className="text-blue-400 font-bold">
+                                 {trade.riskReward}
+                               </span>
+                             </div>
+                           )}
+                           
+                           {trade.executionScore && (
+                             <div className="flex justify-between">
+                               <span className="text-gray-300">Score:</span>
+                               <span className="text-yellow-400 font-bold">
+                                 {trade.executionScore}/10
+                               </span>
+                             </div>
+                           )}
+                         </div>
+                         
+                         <div className="mt-3 pt-2 border-t border-gray-700 text-xs text-gray-400 text-center">
+                           Page {pageNum} • Click to view full details
+                         </div>
+                       </div>
+                       <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-8 border-transparent border-t-gray-900"></div>
+                     </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -489,6 +1154,32 @@ const Trades = ({ userId }) => {
               </p>
             </div>
             <div className="flex items-center space-x-4">
+              {/* View Toggle Buttons */}
+              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className={`flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                    viewMode === 'cards' 
+                      ? 'bg-white text-gray-900 shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Squares2X2Icon className="h-4 w-4 mr-2" />
+                  Cards
+                </button>
+                <button
+                  onClick={() => setViewMode('notebook')}
+                  className={`flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                    viewMode === 'notebook' 
+                      ? 'bg-white text-gray-900 shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <BookOpenIcon className="h-4 w-4 mr-2" />
+                  Notebook
+                </button>
+              </div>
+
               {/* Filters Button */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -673,20 +1364,30 @@ const Trades = ({ userId }) => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main className={`${viewMode === 'notebook' ? 'max-w-none' : 'max-w-7xl'} mx-auto py-6 sm:px-6 lg:px-8`}>
         <div className="px-4 py-4 sm:px-0">
           
-          {/* Trades Grid */}
+          {/* Content based on view mode */}
           {filteredTrades.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {getPaginatedTrades().map((trade) => (
-                  <TradeCard key={trade._id} trade={trade} />
-                ))}
-              </div>
+              {viewMode === 'cards' ? (
+                <>
+                  {/* Cards Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {getPaginatedTrades().map((trade) => (
+                      <TradeCard key={trade._id} trade={trade} />
+                    ))}
+                  </div>
 
-              {/* Pagination */}
-              <PaginationControls />
+                  {/* Pagination */}
+                  <PaginationControls />
+                </>
+              ) : (
+                /* Enhanced Notebook View */
+                <div className="notebook-view-container">
+                  <NotebookView />
+                </div>
+              )}
             </>
           ) : (
             <div className="text-center py-12">
