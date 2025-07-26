@@ -4,6 +4,8 @@ import Dashboard from './components/Dashboard';
 import Analytics from './components/Analytics';
 import Trades from './components/Trades';
 import TradeDetail from './components/TradeDetail';
+import Journal from './components/Journal';
+import JournalEntry from './components/JournalEntry';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import PWAInstall from './components/PWAInstall';
@@ -14,6 +16,7 @@ import {
   HomeIcon, 
   ChartBarIcon, 
   DocumentTextIcon,
+  BookOpenIcon,
   UserCircleIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon
@@ -28,6 +31,7 @@ const Navigation = ({ user, onLogout }) => {
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
     { name: 'Trades', href: '/trades', icon: DocumentTextIcon },
+    { name: 'Journal', href: '/journal', icon: BookOpenIcon },
   ];
 
   const isActive = (href) => location.pathname === href;
@@ -212,6 +216,22 @@ function App() {
               <Route 
                 path="/trade/:id" 
                 element={<TradeDetail userId={user.id} />} 
+              />
+              <Route 
+                path="/journal" 
+                element={<Journal userId={user.id} />} 
+              />
+              <Route 
+                path="/journal/new" 
+                element={<JournalEntry userId={user.id} mode="edit" />} 
+              />
+              <Route 
+                path="/journal/:id" 
+                element={<JournalEntry userId={user.id} mode="view" />} 
+              />
+              <Route 
+                path="/journal/:id/edit" 
+                element={<JournalEntry userId={user.id} mode="edit" />} 
               />
               {/* Catch all route */}
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

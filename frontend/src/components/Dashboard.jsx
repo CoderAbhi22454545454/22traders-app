@@ -8,6 +8,7 @@ import CalendarView from './CalendarView';
 import TradeModal from './TradeModal';
 import TradeScreenshot from './TradeScreenshot';
 import { tradesAPI, formatCurrency } from '../utils/api';
+import { journalApi } from '../utils/journalApi';
 import bitcoinIcon from '../assets/bitcoin.png';
 import goldIcon from '../assets/gold.png';
 import { 
@@ -24,7 +25,9 @@ import {
   BoltIcon,
   FunnelIcon,
   XMarkIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  BookOpenIcon,
+  PencilSquareIcon
 } from '@heroicons/react/24/outline';
 
 // Helper component for instrument icons
@@ -78,6 +81,10 @@ const Dashboard = ({ userId }) => {
   const [tradesPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
 
+  // Journal entries state
+  const [journalEntries, setJournalEntries] = useState([]);
+  const [journalLoading, setJournalLoading] = useState(false);
+
   // Fetch all data once on component mount
   useEffect(() => {
     if (userId) {
@@ -121,30 +128,103 @@ const Dashboard = ({ userId }) => {
     }
   }, [currentPage, filteredTrades, tradesPerPage, totalPages]);
 
+  // Helper function to strip HTML tags and get clean preview text
+  const getCleanPreviewText = (htmlContent, maxLength = 100) => {
+    if (!htmlContent || typeof htmlContent !== 'string') return '';
+    
+    // Remove HTML tags and replace common HTML entities
+    let cleanText = htmlContent
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces
+      .replace(/&amp;/g, '&') // Replace ampersands
+      .replace(/&lt;/g, '<') // Replace less than
+      .replace(/&gt;/g, '>') // Replace greater than
+      .replace(/&quot;/g, '"') // Replace quotes
+      .replace(/&#39;/g, "'") // Replace apostrophes
+      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+      .trim(); // Remove leading/trailing whitespace
+    
+    // Remove markdown-style formatting that might remain
+    cleanText = cleanText
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold markdown
+      .replace(/\*(.*?)\*/g, '$1') // Remove italic markdown
+      .replace(/__(.*?)__/g, '$1') // Remove underline markdown
+      .replace(/~~(.*?)~~/g, '$1') // Remove strikethrough markdown
+      .trim();
+    
+    // Truncate and add ellipsis if needed
+    if (cleanText.length > maxLength) {
+      return cleanText.substring(0, maxLength).trim() + '...';
+    }
+    
+    return cleanText;
+  };
+
+  // Fetch journal entries
+  const fetchJournalEntries = async (forceRefresh = false) => {
+    console.log('📝 Starting fetchJournalEntries for userId:', userId, 'forceRefresh:', forceRefresh);
+    
+    setJournalLoading(true);
+    try {
+      const response = await journalApi.getJournalEntries({
+        page: 1,
+        limit: 5, // Get recent 5 entries for dashboard
+        sortBy: 'recent'
+      });
+      
+      if (response.success) {
+        console.log('📝 Journal Entries Fetched:', {
+          entriesCount: response.data.entries?.length,
+          entries: response.data.entries
+        });
+        setJournalEntries(response.data.entries || []);
+      } else {
+        console.error('❌ Failed to fetch journal entries:', response.message);
+        setJournalEntries([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching journal entries:', error);
+      setJournalEntries([]);
+    } finally {
+      setJournalLoading(false);
+    }
+  };
+
   // Fetch all data once (no filtering parameters) with intelligent caching
   const fetchAllData = async (forceRefresh = false) => {
     console.log('📊 Starting fetchAllData for userId:', userId, 'forceRefresh:', forceRefresh);
     
     setLoading(true);
     try {
-      // Fetch all trades with caching enabled (unless force refresh)
-      const tradesData = await tradesAPI.getAllTrades({
-        userId,
-        page: 1,
-        limit: 1000 // Get a large number of trades
-      }, !forceRefresh, 10 * 60 * 1000); // 10 minute cache TTL, disable cache if force refresh
-      
-      console.log('📋 All Trades Fetched:', {
-        tradesCount: tradesData?.trades?.length,
-        totalPages: tradesData?.totalPages,
-        currentPage: tradesData?.currentPage,
-        fromCache: tradesData.fromCache || false,
-        cacheType: tradesData.cacheType || 'network',
-        firstTrade: tradesData?.trades?.[0],
-        lastTrade: tradesData?.trades?.[tradesData?.trades?.length - 1]
-      });
-      
-      setAllTrades(tradesData.trades || []);
+      // Fetch trades and journal entries in parallel
+      const [tradesPromise, journalPromise] = await Promise.allSettled([
+        tradesAPI.getAllTrades({
+          userId,
+          page: 1,
+          limit: 1000 // Get a large number of trades
+        }, !forceRefresh, 10 * 60 * 1000), // 10 minute cache TTL, disable cache if force refresh
+        
+        fetchJournalEntries(forceRefresh)
+      ]);
+
+      // Handle trades data
+      if (tradesPromise.status === 'fulfilled') {
+        const tradesData = tradesPromise.value;
+        console.log('📋 All Trades Fetched:', {
+          tradesCount: tradesData?.trades?.length,
+          totalPages: tradesData?.totalPages,
+          currentPage: tradesData?.currentPage,
+          fromCache: tradesData.fromCache || false,
+          cacheType: tradesData.cacheType || 'network',
+          firstTrade: tradesData?.trades?.[0],
+          lastTrade: tradesData?.trades?.[tradesData?.trades?.length - 1]
+        });
+        setAllTrades(tradesData.trades || []);
+      } else {
+        console.error('❌ Error fetching trades:', tradesPromise.reason);
+      }
+
+      // Journal entries are handled in fetchJournalEntries function
       
     } catch (error) {
       console.error('❌ Error fetching all data:', error);
@@ -363,9 +443,10 @@ const Dashboard = ({ userId }) => {
 
   const handleTradeAdded = () => {
     fetchAllData(true); // Force refresh all data after adding trade
+    fetchJournalEntries(true); // Also refresh journal entries
   };
 
-  // Listen for cache updates
+  // Listen for cache updates and page visibility changes
   useEffect(() => {
     const handleCacheUpdate = (event) => {
       const { cacheKey, data } = event.detail;
@@ -376,11 +457,29 @@ const Dashboard = ({ userId }) => {
         console.log('[Dashboard] Updating trades from cache update');
         setAllTrades(data.trades);
       }
+
+      // Check if this cache update affects our journal entries
+      if (cacheKey.includes('/api/journal') && data?.entries) {
+        console.log('[Dashboard] Updating journal entries from cache update');
+        setJournalEntries(data.entries);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden && userId) {
+        console.log('[Dashboard] Page became visible, refreshing journal entries');
+        fetchJournalEntries(true); // Refresh journal entries when page becomes visible again
+      }
     };
 
     window.addEventListener('apiCacheUpdate', handleCacheUpdate);
-    return () => window.removeEventListener('apiCacheUpdate', handleCacheUpdate);
-  }, []);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('apiCacheUpdate', handleCacheUpdate);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [userId]);
 
   // Handle filter application
   const applyFilters = () => {
@@ -766,6 +865,145 @@ const Dashboard = ({ userId }) => {
         <div className="bg-white shadow-sm rounded border border-gray-200">
           <div className="calendar-container">
             <CalendarView onDateClick={handleDateClick} selectedDate={selectedDate} userId={userId} />
+          </div>
+        </div>
+
+        {/* Journal Preview Section */}
+        <div className="bg-white shadow-sm rounded border border-gray-200">
+          <div className="px-4 py-3 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <BookOpenIcon className="h-5 w-5 text-purple-600" />
+                <h3 className="text-lg font-medium text-gray-900">Recent Journal Entries</h3>
+              </div>
+              <Link 
+                to="/journal" 
+                className="text-sm text-purple-600 hover:text-purple-500"
+              >
+                View all →
+              </Link>
+            </div>
+          </div>
+
+          <div className="p-4">
+            {journalLoading ? (
+              <div className="space-y-3">
+                {[1, 2].map((i) => (
+                  <div key={i} className="border border-gray-200 rounded-lg p-3 animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
+                    <div className="flex space-x-2">
+                      <div className="h-5 bg-gray-200 rounded-full w-16"></div>
+                      <div className="h-5 bg-gray-200 rounded-full w-12"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : journalEntries.length > 0 ? (
+              <div className="space-y-3">
+                {journalEntries.map((entry) => (
+                  <Link
+                    key={entry._id}
+                    to={`/journal/${entry._id}`}
+                    className="block border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900 text-sm line-clamp-1">
+                          {entry.title || 'Untitled Entry'}
+                        </h4>
+                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                          {getCleanPreviewText(entry.content, 80) || 'No content preview available...'}
+                        </p>
+                        <div className="flex items-center space-x-2 mt-2">
+                          {/* Tags */}
+                          {entry.tags && entry.tags.slice(0, 2).map((tag) => (
+                            <span 
+                              key={tag} 
+                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-purple-100 to-blue-100 text-purple-800"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                          {entry.tags && entry.tags.length > 2 && (
+                            <span className="text-xs text-gray-400">
+                              +{entry.tags.length - 2} more
+                            </span>
+                          )}
+                          
+                          {/* Indicators */}
+                          <div className="flex items-center space-x-2 ml-auto">
+                            {entry.hasDrawing && (
+                              <div className="flex items-center text-xs text-gray-500">
+                                <PencilSquareIcon className="h-3 w-3 mr-1 text-green-500" />
+                                Chart
+                              </div>
+                            )}
+                            {entry.linkedTrades && entry.linkedTrades.length > 0 && (
+                              <div className="flex items-center text-xs text-gray-500">
+                                <ChartBarIcon className="h-3 w-3 mr-1 text-blue-500" />
+                                {entry.linkedTrades.length}
+                              </div>
+                            )}
+                            {entry.isFavorite && (
+                              <div className="text-red-500">
+                                <BookOpenIcon className="h-3 w-3" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500 ml-3 flex-shrink-0">
+                        {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : 'Recently'}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <BookOpenIcon className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No journal entries yet</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Start documenting your trading journey
+                </p>
+                <div className="mt-6">
+                  <Link
+                    to="/journal/new"
+                    className="btn-primary text-sm"
+                  >
+                    <PlusIcon className="h-4 w-4 mr-1" />
+                    Create First Entry
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Quick Journal Actions */}
+            {journalEntries.length > 0 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-gray-600">
+                    📝 {journalEntries.length} recent entries
+                  </span>
+                  <span className="text-xs text-gray-600">•</span>
+                  <span className="text-xs text-gray-600">
+                    🎯 {journalEntries.filter(e => e.hasDrawing).length} with charts
+                  </span>
+                  <span className="text-xs text-gray-600">•</span>
+                  <span className="text-xs text-gray-600">
+                    ⭐ {journalEntries.filter(e => e.isFavorite).length} favorites
+                  </span>
+                </div>
+                <Link
+                  to="/journal/new"
+                  className="btn-secondary text-xs"
+                >
+                  <PlusIcon className="h-3 w-3 mr-1" />
+                  Quick Entry
+                </Link>
+              </div>
+            )}
           </div>
         </div>
 

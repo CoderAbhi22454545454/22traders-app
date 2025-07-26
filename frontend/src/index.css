@@ -316,3 +316,401 @@
     display: none !important;
   }
 } 
+
+/* Journal-specific styles */
+.journal-entry-content {
+  @apply max-w-none text-gray-700 leading-relaxed;
+}
+
+.journal-entry-content h1 {
+  @apply text-2xl font-bold text-gray-900 mb-4;
+}
+
+.journal-entry-content h2 {
+  @apply text-xl font-semibold text-gray-800 mb-3 mt-6;
+}
+
+.journal-entry-content h3 {
+  @apply text-lg font-medium text-gray-700 mb-2 mt-4;
+}
+
+.journal-entry-content p {
+  @apply text-gray-600 leading-relaxed mb-3;
+}
+
+.journal-entry-content ul, .journal-entry-content ol {
+  @apply mb-4 pl-6;
+}
+
+.journal-entry-content li {
+  @apply text-gray-600 mb-1;
+}
+
+.journal-entry-content strong {
+  @apply font-semibold text-gray-800;
+}
+
+.journal-entry-content blockquote {
+  @apply border-l-4 border-purple-200 pl-4 italic text-gray-600 bg-purple-50 py-2 rounded-r;
+}
+
+/* Tiptap editor styles */
+.ProseMirror {
+  @apply outline-none border-none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  @apply text-gray-400 pointer-events-none;
+  float: left;
+  height: 0;
+}
+
+.ProseMirror:focus {
+  @apply outline-none;
+}
+
+/* Drawing canvas styles */
+.drawing-canvas-toolbar {
+  @apply bg-gray-50 border-b border-gray-200 p-4;
+}
+
+.drawing-tool-btn {
+  @apply flex items-center px-3 py-2 rounded text-sm transition-colors border;
+}
+
+.drawing-tool-btn.active {
+  @apply bg-blue-100 text-blue-700 border-blue-300;
+}
+
+.drawing-tool-btn:not(.active) {
+  @apply bg-white text-gray-600 border-gray-300 hover:bg-gray-50;
+}
+
+/* Fabric.js canvas container */
+.canvas-container {
+  @apply relative inline-block;
+}
+
+.canvas-container canvas {
+  @apply border border-gray-200 rounded shadow-sm;
+}
+
+/* Journal entry card hover effects */
+.journal-entry-card {
+  @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-1;
+}
+
+.journal-entry-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Tag styling */
+.journal-tag {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  transition: all 0.2s ease;
+}
+
+.journal-tag:hover {
+  transform: scale(1.05);
+}
+
+/* Mood indicator styling */
+.mood-indicator {
+  @apply flex items-center space-x-1 text-sm;
+}
+
+.mood-confident {
+  @apply text-green-600;
+}
+
+.mood-reflective {
+  @apply text-blue-600;
+}
+
+.mood-analytical {
+  @apply text-purple-600;
+}
+
+.mood-excited {
+  @apply text-red-600;
+}
+
+.mood-calm {
+  @apply text-indigo-600;
+}
+
+/* Loading spinner for journal */
+.journal-spinner {
+  @apply inline-block w-6 h-6 border-2 border-purple-200 border-t-purple-600 rounded-full;
+  animation: spin 1s linear infinite;
+}
+
+/* Template selection modal */
+.template-modal-overlay {
+  @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+.template-card {
+  @apply transition-all duration-200 hover:shadow-md hover:scale-105;
+}
+
+/* Search highlight in journal entries */
+.search-highlight {
+  @apply bg-yellow-200 text-yellow-900 px-1 rounded;
+}
+
+/* Line clamp utilities for journal previews */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Journal stats cards */
+.journal-stat-card {
+  @apply bg-white rounded-lg border border-gray-200 p-4 transition-all hover:shadow-sm;
+}
+
+.journal-stat-card:hover {
+  border-color: var(--purple-300);
+}
+
+/* Custom scrollbar for journal content */
+.journal-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.journal-content::-webkit-scrollbar-track {
+  @apply bg-gray-100 rounded;
+}
+
+.journal-content::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 rounded;
+}
+
+.journal-content::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
+}
+
+/* Enhanced Journal Editor Styles */
+.journal-entry-content {
+  line-height: 1.7;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.journal-entry-content .ProseMirror {
+  outline: none;
+  padding: 1rem;
+  min-height: 400px;
+}
+
+.journal-entry-content .ProseMirror:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Enhanced text formatting */
+.journal-entry-content h1 {
+  @apply text-3xl font-bold text-gray-900 mb-6 mt-8 first:mt-0;
+  line-height: 1.2;
+}
+
+.journal-entry-content h2 {
+  @apply text-2xl font-bold text-gray-800 mb-4 mt-6;
+  line-height: 1.3;
+}
+
+.journal-entry-content h3 {
+  @apply text-xl font-semibold text-gray-800 mb-3 mt-5;
+  line-height: 1.4;
+}
+
+.journal-entry-content p {
+  @apply text-gray-700 mb-4 leading-relaxed;
+}
+
+.journal-entry-content strong {
+  @apply font-semibold text-gray-900;
+}
+
+.journal-entry-content em {
+  @apply italic text-gray-800;
+}
+
+.journal-entry-content u {
+  @apply underline decoration-2 underline-offset-2;
+}
+
+.journal-entry-content s {
+  @apply line-through text-gray-500;
+}
+
+.journal-entry-content code {
+  @apply bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm font-mono;
+}
+
+.journal-entry-content mark {
+  @apply bg-yellow-200 text-gray-900 px-1 rounded;
+}
+
+/* List styling */
+.journal-entry-content ul {
+  @apply list-disc list-outside ml-6 mb-4 space-y-2;
+}
+
+.journal-entry-content ol {
+  @apply list-decimal list-outside ml-6 mb-4 space-y-2;
+}
+
+.journal-entry-content li {
+  @apply text-gray-700 leading-relaxed;
+}
+
+.journal-entry-content li p {
+  @apply mb-2;
+}
+
+/* Blockquote styling */
+.journal-entry-content blockquote {
+  @apply border-l-4 border-purple-300 pl-6 py-4 my-6 bg-purple-50 italic text-gray-700 rounded-r-lg;
+}
+
+.journal-entry-content blockquote p {
+  @apply mb-2 last:mb-0;
+}
+
+/* Link styling */
+.journal-entry-content a {
+  @apply text-blue-600 hover:text-blue-800 underline decoration-2 underline-offset-2 transition-colors;
+}
+
+/* Table styling */
+.journal-entry-content table {
+  @apply w-full border-collapse border border-gray-300 my-6 rounded-lg overflow-hidden;
+}
+
+.journal-entry-content th {
+  @apply bg-gray-100 border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900;
+}
+
+.journal-entry-content td {
+  @apply border border-gray-300 px-4 py-3 text-gray-700;
+}
+
+.journal-entry-content tr:nth-child(even) {
+  @apply bg-gray-50;
+}
+
+/* Horizontal rule */
+.journal-entry-content hr {
+  @apply border-0 border-t-2 border-gray-200 my-8;
+}
+
+/* Text alignment */
+.journal-entry-content [style*="text-align: center"] {
+  text-align: center;
+}
+
+.journal-entry-content [style*="text-align: right"] {
+  text-align: right;
+}
+
+.journal-entry-content [style*="text-align: left"] {
+  text-align: left;
+}
+
+/* Subscript and superscript */
+.journal-entry-content sub {
+  @apply text-xs;
+  vertical-align: sub;
+}
+
+.journal-entry-content sup {
+  @apply text-xs;
+  vertical-align: super;
+}
+
+/* Custom color styling */
+.journal-entry-content [style*="color: #ef4444"] {
+  color: #ef4444 !important;
+}
+
+.journal-entry-content [style*="color: #3b82f6"] {
+  color: #3b82f6 !important;
+}
+
+.journal-entry-content [style*="color: #10b981"] {
+  color: #10b981 !important;
+}
+
+.journal-entry-content [style*="color: #f59e0b"] {
+  color: #f59e0b !important;
+}
+
+.journal-entry-content [style*="color: #8b5cf6"] {
+  color: #8b5cf6 !important;
+}
+
+/* Placeholder styling */
+.journal-entry-content .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9ca3af;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Selection styling */
+.journal-entry-content .ProseMirror ::selection {
+  @apply bg-purple-100;
+}
+
+/* Focus and hover effects for toolbar buttons */
+.toolbar-button {
+  @apply transition-all duration-150 ease-in-out;
+}
+
+.toolbar-button:hover {
+  @apply transform scale-105;
+}
+
+.toolbar-button:active {
+  @apply transform scale-95;
+}
+
+/* Responsive design for toolbar */
+@media (max-width: 640px) {
+  .journal-entry-content .ProseMirror {
+    padding: 0.75rem;
+  }
+  
+  .journal-entry-content h1 {
+    @apply text-2xl;
+  }
+  
+  .journal-entry-content h2 {
+    @apply text-xl;
+  }
+  
+  .journal-entry-content h3 {
+    @apply text-lg;
+  }
+} 

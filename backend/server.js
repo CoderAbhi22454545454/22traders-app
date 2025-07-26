@@ -30,6 +30,7 @@ app.use(morgan('combined'));
 // Routes
 app.use('/api/trades', require('./routes/trades'));
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/journal', require('./routes/journal'));
 app.use('/api/push', require('./routes/push'));
 app.use('/api/pwa', require('./routes/pwa'));
 

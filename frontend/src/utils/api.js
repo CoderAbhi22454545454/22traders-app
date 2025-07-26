@@ -528,6 +528,106 @@ export const tradesAPI = {
   }
 };
 
+// Journal API functions
+export const journalAPI = {
+  // Get all journal entries with filtering and pagination
+  getJournalEntries: async (userId, options = {}) => {
+    try {
+      const params = { userId, ...options };
+      const response = await api.get('/journal', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Get a specific journal entry by ID
+  getJournalEntry: async (entryId, userId) => {
+    try {
+      const response = await api.get(`/journal/${entryId}`, { params: { userId } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Create a new journal entry
+  createJournalEntry: async (entryData) => {
+    try {
+      const response = await api.post('/journal', entryData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Update an existing journal entry
+  updateJournalEntry: async (entryId, entryData) => {
+    try {
+      const response = await api.put(`/journal/${entryId}`, entryData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Delete a journal entry
+  deleteJournalEntry: async (entryId, userId) => {
+    try {
+      const response = await api.delete(`/journal/${entryId}`, { params: { userId } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Toggle favorite status
+  toggleFavorite: async (entryId, userId) => {
+    try {
+      const response = await api.patch(`/journal/${entryId}/favorite`, { userId });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Get journal analytics
+  getAnalytics: async (userId, dateFrom, dateTo) => {
+    try {
+      const params = { userId };
+      if (dateFrom) params.dateFrom = dateFrom;
+      if (dateTo) params.dateTo = dateTo;
+      
+      const response = await api.get('/journal/analytics', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Get all unique tags
+  getTags: async (userId) => {
+    try {
+      const response = await api.get('/journal/tags', { params: { userId } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Search journal entries
+  searchEntries: async (query, userId, limit = 20) => {
+    try {
+      const response = await api.get(`/journal/search/${encodeURIComponent(query)}`, { 
+        params: { userId, limit } 
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  }
+};
+
 // Utility functions
 export const formatCurrency = (amount, currency = 'USD') => {
   return new Intl.NumberFormat('en-US', {
@@ -586,6 +686,25 @@ export const authAPI = {
     } catch (error) {
       throw error.response?.data || error;
     }
+  }
+};
+
+// Export a simple apiRequest function for backward compatibility
+export const apiRequest = async (method, endpoint, data = null) => {
+  try {
+    const config = { method: method.toLowerCase() };
+    if (data) {
+      config.data = data;
+    }
+    
+    const response = await api.request({
+      ...config,
+      url: endpoint
+    });
+    
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
   }
 };
 
