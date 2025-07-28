@@ -1,12 +1,10 @@
-const CACHE_NAME = 'trade-journal-v2';
-const DATA_CACHE_NAME = 'trade-journal-data-v2';
-const RUNTIME_CACHE_NAME = 'trade-journal-runtime-v2';
+const CACHE_NAME = 'trade-journal-v3'; // Changed from v2 to v3
+const DATA_CACHE_NAME = 'trade-journal-data-v3'; // Changed from v2 to v3  
+const RUNTIME_CACHE_NAME = 'trade-journal-runtime-v3'; // Changed from v2 to v3
 
 // Static assets to cache immediately
 const urlsToCache = [
   '/',
-  '/static/css/main.css',
-  '/static/js/main.js',
   '/manifest.json',
   '/icon-192x192.png',
   '/icon-512x512.png',
@@ -14,6 +12,7 @@ const urlsToCache = [
   '/apple-touch-icon.png',
   '/favicon-32x32.png',
   '/favicon-16x16.png'
+  // Removed '/static/css/main.css' and '/static/js/main.js' since they have hashed names
 ];
 
 // API endpoints that should be cached for offline access
@@ -34,7 +33,7 @@ const CACHE_STRATEGIES = {
 
 // Install event - cache static resources
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing Service Worker v2');
+  console.log('[SW] Installing Service Worker v3');
   event.waitUntil(
     (async () => {
       try {
@@ -54,21 +53,29 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches and take control
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating Service Worker v2');
+  console.log('[SW] Activating Service Worker v3');
   event.waitUntil(
     (async () => {
       try {
         const cacheNames = await caches.keys();
+        
+        // Delete ALL old caches to force fresh start
         await Promise.all(
           cacheNames.map(async (cacheName) => {
             if (cacheName !== CACHE_NAME && 
                 cacheName !== DATA_CACHE_NAME && 
                 cacheName !== RUNTIME_CACHE_NAME) {
               console.log('[SW] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
+              return caches.delete(cacheName);
+            }
+          })
+        );
+        
+        // Clear current caches too to force fresh content
+        console.log('[SW] Clearing all caches for fresh start');
+        await caches.delete(CACHE_NAME);
+        await caches.delete(DATA_CACHE_NAME);  
+        await caches.delete(RUNTIME_CACHE_NAME);
         
         // Take control of all clients immediately
         await clients.claim();
@@ -79,7 +86,7 @@ self.addEventListener('activate', (event) => {
         clientList.forEach(client => {
           client.postMessage({
             type: 'SW_ACTIVATED',
-            version: 'v2'
+            version: 'v3'
           });
         });
       } catch (error) {
