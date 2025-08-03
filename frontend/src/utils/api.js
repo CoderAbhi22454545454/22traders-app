@@ -390,7 +390,7 @@ export const tradesAPI = {
   },
 
   // Get comprehensive statistics for dashboard (now unused - we use client-side calculation)
-  getComprehensiveStats: async (userId, timeRangeOrCustom = null) => {
+  getComprehensiveStats: async (userId, timeRangeOrCustom = null, tradeType = null) => {
     try {
       const params = userId ? { userId } : {};
       
@@ -404,6 +404,11 @@ export const tradesAPI = {
           // Regular time range string
           params.timeRange = timeRangeOrCustom;
         }
+      }
+      
+      // Add trade type filter
+      if (tradeType && tradeType !== 'all') {
+        params.tradeType = tradeType;
       }
       
       const response = await api.get('/trades/stats', { params });

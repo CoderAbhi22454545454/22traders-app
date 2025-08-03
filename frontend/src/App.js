@@ -12,6 +12,7 @@ import PWAInstall from './components/PWAInstall';
 import PWAUpdate from './components/PWAUpdate';
 import PWAStatus from './components/PWAStatus';
 import { NotificationProvider } from './components/Notifications';
+import { getDB } from './utils/indexedDB'; // Add IndexedDB import
 import { 
   HomeIcon, 
   ChartBarIcon, 
@@ -130,16 +131,32 @@ function App() {
 
   // Check for existing user on app load
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    const initializeApp = async () => {
       try {
-        setUser(JSON.parse(storedUser));
+        // Initialize IndexedDB first to prevent race conditions
+        console.log('[App] Initializing IndexedDB...');
+        await getDB();
+        console.log('[App] IndexedDB initialized successfully');
+        
+        // Then check for existing user
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch (error) {
+            console.error('Error parsing stored user:', error);
+            localStorage.removeItem('user');
+          }
+        }
       } catch (error) {
-        console.error('Error parsing stored user:', error);
-        localStorage.removeItem('user');
+        console.error('[App] Error initializing app:', error);
+        // Continue even if IndexedDB fails - app should still work without offline features
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+
+    initializeApp();
   }, []);
 
   const handleLogin = (userData) => {

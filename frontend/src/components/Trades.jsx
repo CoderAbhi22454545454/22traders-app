@@ -44,6 +44,7 @@ const Trades = ({ userId }) => {
     instrument: 'all',
     strategy: 'all',
     direction: 'all',
+    tradeType: 'all', // 'all', 'real', 'backtest'
     sortBy: 'date',
     sortOrder: 'desc'
   });
@@ -193,6 +194,15 @@ const Trades = ({ userId }) => {
       filtered = filtered.filter(trade => trade.direction === filters.direction);
     }
 
+    // Trade type filter (real vs backtest)
+    if (filters.tradeType !== 'all') {
+      if (filters.tradeType === 'real') {
+        filtered = filtered.filter(trade => !trade.isBacktest);
+      } else if (filters.tradeType === 'backtest') {
+        filtered = filtered.filter(trade => trade.isBacktest);
+      }
+    }
+
     // Sort trades
     filtered.sort((a, b) => {
       let aValue, bValue;
@@ -272,6 +282,7 @@ const Trades = ({ userId }) => {
       instrument: 'all',
       strategy: 'all',
       direction: 'all',
+      tradeType: 'all',
       sortBy: 'date',
       sortOrder: 'desc'
     });
@@ -412,11 +423,25 @@ const Trades = ({ userId }) => {
             </div>
           </div>
           <div className="text-right">
-            <div className={`text-xl font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(trade.pnl)}
+            <div className="flex items-center justify-end space-x-2 mb-1">
+              <div className={`text-xl font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency(trade.pnl)}
+              </div>
+                                              {trade.pipes && trade.pipes !== '0' && trade.pipes !== '0' && (
+                                  <span className={`text-xs px-1.5 py-0.5 rounded ${trade.pipes.startsWith('-') ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                                    {trade.pipes.startsWith('-') ? '' : '+'}{trade.pipes}p
+                                  </span>
+                                )}
             </div>
-            <div className={`text-sm font-medium ${resultColor}`}>
-              {trade.result?.toUpperCase()}
+            <div className="flex items-center justify-end space-x-2">
+              <div className={`text-sm font-medium ${resultColor}`}>
+                {trade.result?.toUpperCase()}
+              </div>
+              {trade.isBacktest && (
+                <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">
+                  BT
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -1314,6 +1339,22 @@ const Trades = ({ userId }) => {
                     <option value="all">All Directions</option>
                     <option value="Long">Long</option>
                     <option value="Short">Short</option>
+                  </select>
+                </div>
+
+                {/* Trade Type Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Trade Type
+                  </label>
+                  <select
+                    value={filters.tradeType}
+                    onChange={(e) => setFilters({...filters, tradeType: e.target.value})}
+                    className="form-input w-full"
+                  >
+                    <option value="all">All Trades</option>
+                    <option value="real">Real Trades</option>
+                    <option value="backtest">Backtest Trades</option>
                   </select>
                 </div>
 

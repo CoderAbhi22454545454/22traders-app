@@ -30,6 +30,8 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
     tradeDuration: '',
     tradeOutcome: '',
     pnl: '',
+    pipes: '0',
+    isBacktest: false,
     reasonForTrade: '',
     emotions: [],
     customEmotion: '',
@@ -111,6 +113,8 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
       tradeDuration: editTrade.tradeDuration || '',
       tradeOutcome: editTrade.tradeOutcome || editTrade.result || '',
       pnl: editTrade.pnl?.toString() || '',
+      pipes: editTrade.pipes || '0',
+      isBacktest: editTrade.isBacktest || false,
       reasonForTrade: editTrade.reasonForTrade || '',
       emotions: existingEmotions,
       customEmotion: '',
@@ -153,6 +157,8 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
       tradeDuration: '',
       tradeOutcome: '',
       pnl: '',
+      pipes: '0',
+      isBacktest: false,
       reasonForTrade: '',
       emotions: [],
       customEmotion: '',
@@ -272,6 +278,8 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
         stopLoss: formData.stopLoss ? parseFloat(formData.stopLoss) : undefined,
         takeProfit: formData.takeProfit ? parseFloat(formData.takeProfit) : undefined,
         pnl: formData.pnl ? parseFloat(formData.pnl) : undefined,
+        pipes: formData.pipes,
+        isBacktest: formData.isBacktest,
         // Map new fields to old fields for backward compatibility
         instrument: formData.tradePair,
         lotSize: formData.positionSize ? parseFloat(formData.positionSize) : undefined,
@@ -376,8 +384,20 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
                             </div>
                             <div className="text-sm text-gray-600">
                               <div>{trade.direction} • {trade.positionSize || trade.lotSize}</div>
-                              <div className={`font-medium ${trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {trade.pnl ? formatCurrency(trade.pnl) : 'N/A'}
+                              <div className="flex items-center justify-between">
+                                <div className={`font-medium ${trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {trade.pnl ? formatCurrency(trade.pnl) : 'N/A'}
+                                </div>
+                                {trade.pipes && trade.pipes !== '0' && trade.pipes !== '0' && (
+                                  <span className={`text-xs px-1 py-0.5 rounded ${trade.pipes.startsWith('-') ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                                    {trade.pipes.startsWith('-') ? '' : '+'}{trade.pipes}p
+                                  </span>
+                                )}
+                                {trade.isBacktest && (
+                                  <span className="text-xs px-1 py-0.5 rounded bg-blue-100 text-blue-800">
+                                    BT
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -626,6 +646,39 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
                             className="form-input"
                             placeholder="0.00"
                           />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Pipes
+                          </label>
+                          <input
+                            type="text"
+                            name="pipes"
+                            value={formData.pipes}
+                            onChange={handleInputChange}
+                            className="form-input"
+                            placeholder="e.g., -10, 0, 10, +5"
+                          />
+                        </div>
+
+                        <div className="flex items-center">
+                          <div className="flex items-center h-5">
+                            <input
+                              id="isBacktest"
+                              name="isBacktest"
+                              type="checkbox"
+                              checked={formData.isBacktest}
+                              onChange={(e) => setFormData(prev => ({ ...prev, isBacktest: e.target.checked }))}
+                              className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                            />
+                          </div>
+                          <div className="ml-3 text-sm">
+                            <label htmlFor="isBacktest" className="font-medium text-gray-700">
+                              Backtest Trade
+                            </label>
+                            <p className="text-gray-500 text-xs">This trade won't affect real stats</p>
+                          </div>
                         </div>
                       </div>
 

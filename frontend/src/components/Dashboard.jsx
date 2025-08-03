@@ -59,6 +59,7 @@ const Dashboard = ({ userId }) => {
   const [loading, setLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [timeRange, setTimeRange] = useState('all'); // all, 7d, 10d, 1m, 2m, 3m, 6m, 1y, custom
+  const [tradeType, setTradeType] = useState('real'); // 'all', 'real', 'backtest'
   
   // New state for custom date filters
   const [filterMode, setFilterMode] = useState('preset'); // 'preset' or 'custom'
@@ -96,6 +97,7 @@ const Dashboard = ({ userId }) => {
   useEffect(() => {
     console.log('🔄 Filter useEffect triggered:', {
       timeRange,
+      tradeType,
       customStartDate,
       customEndDate,
       filterMode,
@@ -108,7 +110,7 @@ const Dashboard = ({ userId }) => {
     if (allTrades.length > 0) {
       applyClientSideFilters();
     }
-  }, [timeRange, customStartDate, customEndDate, filterMode, allTrades]);
+  }, [timeRange, tradeType, customStartDate, customEndDate, filterMode, allTrades]);
 
   // Update pagination when current page changes
   useEffect(() => {
@@ -263,10 +265,21 @@ const Dashboard = ({ userId }) => {
       console.log('📅 No date filter applied - showing all trades');
     }
 
+    // Apply trade type filter
+    if (tradeType !== 'all') {
+      console.log('🔄 Applying trade type filter:', tradeType);
+      if (tradeType === 'real') {
+        filtered = filtered.filter(trade => !trade.isBacktest);
+      } else if (tradeType === 'backtest') {
+        filtered = filtered.filter(trade => trade.isBacktest);
+      }
+    }
+
     console.log('✅ Filtered trades:', {
       originalCount: allTrades.length,
       filteredCount: filtered.length,
       dateRange: dateRange || 'All Time',
+      tradeType: tradeType,
       totalPages: Math.ceil(filtered.length / tradesPerPage),
       currentPage: currentPage
     });
@@ -418,6 +431,33 @@ const Dashboard = ({ userId }) => {
     const profitableDays = Object.values(dailyPnL).filter(pnl => pnl > 0).length;
     const lossDays = Object.values(dailyPnL).filter(pnl => pnl < 0).length;
 
+    // Calculate average Risk:Reward ratio
+    const riskRewardRatios = trades
+      .filter(trade => trade.riskReward && trade.riskReward !== '')
+      .map(trade => {
+        const ratio = trade.riskReward;
+        if (typeof ratio === 'string' && ratio.includes(':')) {
+          const [risk, reward] = ratio.split(':').map(Number);
+          if (!isNaN(risk) && !isNaN(reward) && risk > 0) {
+            return reward / risk;
+          }
+        }
+        return null;
+      })
+      .filter(ratio => ratio !== null);
+
+    const avgRiskReward = riskRewardRatios.length > 0 
+      ? (() => {
+          const avgRatio = riskRewardRatios.reduce((sum, ratio) => sum + ratio, 0) / riskRewardRatios.length;
+          // Format as 1:X or X:1 depending on whether it's above or below 1
+          if (avgRatio >= 1) {
+            return `1:${avgRatio.toFixed(2)}`;
+          } else {
+            return `${(1/avgRatio).toFixed(2)}:1`;
+          }
+        })()
+      : 'N/A';
+
     const calculatedStats = {
       overview: {
         totalTrades,
@@ -426,7 +466,7 @@ const Dashboard = ({ userId }) => {
         avgExecutionScore,
         bestInstrument,
         maxWinStreak,
-        avgRiskReward: 'N/A', // Can be calculated if risk/reward data is available
+        avgRiskReward,
         profitableDays,
         lossDays
       }
@@ -718,6 +758,16 @@ const Dashboard = ({ userId }) => {
                     {option.label}
                   </option>
                 ))}
+              </select>
+
+              <select
+                value={tradeType}
+                onChange={(e) => setTradeType(e.target.value)}
+                className="form-input py-1.5 px-3 text-sm rounded border border-gray-300"
+              >
+                <option value="real">Real Trades</option>
+                <option value="backtest">Backtest</option>
+                <option value="all">All Trades</option>
               </select>
               
               <button

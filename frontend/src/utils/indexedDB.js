@@ -462,12 +462,27 @@ class IndexedDBManager {
 
 // Singleton instance
 let dbInstance = null;
+let dbInitPromise = null;
 
 export const getDB = async () => {
-  if (!dbInstance) {
-    dbInstance = new IndexedDBManager();
-    await dbInstance.init();
+  if (!dbInstance && !dbInitPromise) {
+    dbInitPromise = (async () => {
+      try {
+        const manager = new IndexedDBManager();
+        await manager.init();
+        dbInstance = manager;
+        return dbInstance;
+      } catch (error) {
+        dbInitPromise = null; // Reset on error so it can be retried
+        throw error;
+      }
+    })();
   }
+  
+  if (dbInitPromise) {
+    return await dbInitPromise;
+  }
+  
   return dbInstance;
 };
 

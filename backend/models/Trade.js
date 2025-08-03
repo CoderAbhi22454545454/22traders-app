@@ -44,6 +44,12 @@ const tradeSchema = new mongoose.Schema({
   pnl: {
     type: Number
   },
+  // New field: Pipes (text field for flexible values)
+  pipes: {
+    type: String,
+    trim: true,
+    default: '0'
+  },
   result: {
     type: String,
     enum: ['win', 'loss', 'be']
@@ -116,6 +122,11 @@ const tradeSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: 1000
+  },
+  // New field: Is Backtest Trade
+  isBacktest: {
+    type: Boolean,
+    default: false
   },
   screenshotUrl: {
     type: String,

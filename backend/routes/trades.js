@@ -86,6 +86,8 @@ const tradeValidation = [
   body('stopLoss').optional().isFloat({ min: 0 }).withMessage('Stop loss must be a positive number'),
   body('takeProfit').optional().isFloat({ min: 0 }).withMessage('Take profit must be a positive number'),
   body('pnl').optional().isNumeric().withMessage('PnL must be a number'),
+  body('pipes').optional().trim().isLength({ max: 10 }).withMessage('Pipes must be less than 10 characters'),
+  body('isBacktest').optional().isBoolean().withMessage('isBacktest must be a boolean'),
   body('result').optional().isIn(['win', 'loss', 'be']).withMessage('Result must be win, loss, or be'),
   body('tradeOutcome').optional().isIn(['Win', 'Loss', 'Break Even']).withMessage('Trade outcome must be Win, Loss, or Break Even'),
   body('direction').optional().isIn(['Long', 'Short']).withMessage('Direction must be Long or Short'),
@@ -106,12 +108,20 @@ const tradeValidation = [
 // GET /api/trades - Get all trades with optional filters
 router.get('/', async (req, res) => {
   try {
-    const { date, instrument, userId, page = 1, limit = 10, timeRange } = req.query;
+    const { date, instrument, userId, page = 1, limit = 10, timeRange, tradeType } = req.query;
     
     // Build filter object
     const filter = {};
     
     if (userId) filter.userId = new mongoose.Types.ObjectId(userId);
+    
+    // Add backtest filtering
+    if (tradeType === 'real') {
+      filter.isBacktest = { $ne: true };
+    } else if (tradeType === 'backtest') {
+      filter.isBacktest = true;
+    }
+    // If tradeType is not specified, show all trades
     if (date) {
       const startDate = new Date(date);
       const endDate = new Date(date);
@@ -219,8 +229,15 @@ router.get('/', async (req, res) => {
 // GET /api/trades/count - Get total trade count for auto-filling trade number
 router.get('/count', async (req, res) => {
   try {
-    const { userId } = req.query;
+    const { userId, tradeType } = req.query;
     const filter = userId ? { userId: new mongoose.Types.ObjectId(userId) } : {};
+    
+    // Add backtest filtering
+    if (tradeType === 'real') {
+      filter.isBacktest = { $ne: true };
+    } else if (tradeType === 'backtest') {
+      filter.isBacktest = true;
+    }
     
     const count = await Trade.countDocuments(filter);
     
@@ -260,6 +277,8 @@ router.post('/', upload.single('screenshot'), tradeValidation, async (req, res) 
       stopLoss,
       takeProfit,
       pnl,
+      pipes,
+      isBacktest,
       result,
       tradeOutcome,
       direction,
@@ -310,6 +329,8 @@ router.post('/', upload.single('screenshot'), tradeValidation, async (req, res) 
       stopLoss: stopLoss ? parseFloat(stopLoss) : undefined,
       takeProfit: takeProfit ? parseFloat(takeProfit) : undefined,
       pnl: pnl ? parseFloat(pnl) : undefined,
+      pipes: pipes !== undefined ? pipes.toString() : '0',
+      isBacktest: isBacktest === true || isBacktest === 'true',
       result,
       tradeOutcome,
       direction,
@@ -349,8 +370,15 @@ router.post('/', upload.single('screenshot'), tradeValidation, async (req, res) 
 // GET /api/trades/dates - Get all dates that have trades (for calendar indicators)
 router.get('/dates', async (req, res) => {
   try {
-    const { userId } = req.query;
+    const { userId, tradeType } = req.query;
     const filter = userId ? { userId: new mongoose.Types.ObjectId(userId) } : {};
+    
+    // Add backtest filtering
+    if (tradeType === 'real') {
+      filter.isBacktest = { $ne: true };
+    } else if (tradeType === 'backtest') {
+      filter.isBacktest = true;
+    }
 
     const dates = await Trade.aggregate([
       { $match: filter },
@@ -378,8 +406,16 @@ router.get('/dates', async (req, res) => {
 // GET /api/trades/stats - Get comprehensive trading statistics
 router.get('/stats', async (req, res) => {
   try {
-    const { userId, timeRange } = req.query;
+    const { userId, timeRange, tradeType } = req.query;
     const filter = userId ? { userId: new mongoose.Types.ObjectId(userId) } : {};
+    
+    // Add backtest filtering
+    if (tradeType === 'real') {
+      filter.isBacktest = { $ne: true };
+    } else if (tradeType === 'backtest') {
+      filter.isBacktest = true;
+    }
+    // If tradeType is not specified, show all trades
     
     // Add time range filtering
     if (timeRange) {
@@ -646,7 +682,7 @@ router.put('/:id', upload.single('screenshot'), tradeValidation, async (req, res
 
     const {
       date, instrument, tradePair, tradeNumber, entryPrice, exitPrice, 
-      stopLoss, takeProfit, pnl, result, tradeOutcome, direction, lotSize,
+      stopLoss, takeProfit, pnl, pipes, isBacktest, result, tradeOutcome, direction, lotSize,
       positionSize, riskReward, strategy, session, tradeDuration,
       executionScore, emotions, reasonForTrade, lessonLearned, notes, additionalNotes
     } = req.body;
@@ -692,6 +728,8 @@ router.put('/:id', upload.single('screenshot'), tradeValidation, async (req, res
       stopLoss: stopLoss ? parseFloat(stopLoss) : undefined,
       takeProfit: takeProfit ? parseFloat(takeProfit) : undefined,
       pnl: pnl ? parseFloat(pnl) : undefined,
+      pipes: pipes !== undefined ? pipes.toString() : undefined,
+      isBacktest: isBacktest !== undefined ? (isBacktest === true || isBacktest === 'true') : undefined,
       result,
       tradeOutcome,
       direction,
