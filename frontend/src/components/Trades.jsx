@@ -427,11 +427,11 @@ const Trades = ({ userId }) => {
               <div className={`text-xl font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
                 {formatCurrency(trade.pnl)}
               </div>
-                                              {trade.pipes && trade.pipes !== '0' && trade.pipes !== '0' && (
-                                  <span className={`text-xs px-1.5 py-0.5 rounded ${trade.pipes.startsWith('-') ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                                    {trade.pipes.startsWith('-') ? '' : '+'}{trade.pipes}p
-                                  </span>
-                                )}
+              {trade.pipes && trade.pipes !== '0' && trade.pipes !== '0' && (
+                <span className={`text-xs px-1.5 py-0.5 rounded ${trade.pipes.startsWith('-') ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                  {trade.pipes.startsWith('-') ? '' : '+'}{trade.pipes}p
+                </span>
+              )}
             </div>
             <div className="flex items-center justify-end space-x-2">
               <div className={`text-sm font-medium ${resultColor}`}>
@@ -575,11 +575,25 @@ const Trades = ({ userId }) => {
                 </div>
               </div>
               <div className="text-right">
-                <div className={`text-3xl font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(currentTrade.pnl)}
+                <div className="flex items-center justify-end space-x-3 mb-2">
+                  <div className={`text-3xl font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCurrency(currentTrade.pnl)}
+                  </div>
+                  {currentTrade.pipes && currentTrade.pipes !== '0' && currentTrade.pipes !== '0' && (
+                    <span className={`text-sm px-2 py-1 rounded ${currentTrade.pipes.startsWith('-') ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                      {currentTrade.pipes.startsWith('-') ? '' : '+'}{currentTrade.pipes}p
+                    </span>
+                  )}
                 </div>
-                <div className={`text-lg font-medium ${resultColor}`}>
-                  {currentTrade.tradeOutcome || currentTrade.result?.toUpperCase() || 'N/A'}
+                <div className="flex items-center justify-end space-x-2">
+                  <div className={`text-lg font-medium ${resultColor}`}>
+                    {currentTrade.tradeOutcome || currentTrade.result?.toUpperCase() || 'N/A'}
+                  </div>
+                  {currentTrade.isBacktest && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">
+                      BT
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -699,6 +713,20 @@ const Trades = ({ userId }) => {
                         <div className="text-sm text-gray-500">Risk/Reward</div>
                         <div className="text-lg font-semibold">
                           {currentTrade.riskReward}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentTrade.pipes && currentTrade.pipes !== '0' && currentTrade.pipes !== '0' && (
+                  <div className="flex items-center space-x-3 bg-gradient-to-r from-gray-50 to white">
+                      <div className={`h-6 w-6 rounded-full flex items-center justify-center ${currentTrade.pipes.startsWith('-') ? 'bg-red-100' : 'bg-green-100'}`}>
+                        <span className={`text-xs font-bold ${currentTrade.pipes.startsWith('-') ? 'text-red-600' : 'text-green-600'}`}>Pipes</span>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Pipes</div>
+                        <div className={`text-lg font-semibold ${currentTrade.pipes.startsWith('-') ? 'text-red-600' : 'text-green-600'}`}>
+                          {currentTrade.pipes.startsWith('-') ? '' : '+'}{currentTrade.pipes}
                         </div>
                       </div>
                     </div>

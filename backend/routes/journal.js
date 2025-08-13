@@ -126,7 +126,7 @@ router.get('/', async (req, res) => {
     const {
       userId,
       page = 1,
-      limit = 10,
+      limit = 120,
       sortBy = '-createdAt',
       mood,
       category,
@@ -156,10 +156,14 @@ router.get('/', async (req, res) => {
 
     // Build query options
     const options = {
-      page: parseInt(page),
-      limit: Math.min(parseInt(limit), 100), // Max 100 entries per request
+      limit: Math.min(parseInt(limit), 1000), // Increased max limit to 1000 entries
       sortBy
     };
+    
+    // Only add page if it's provided (for pagination)
+    if (page) {
+      options.page = parseInt(page);
+    }
 
     // Add filters
     if (mood) options.mood = mood;
@@ -197,22 +201,31 @@ router.get('/', async (req, res) => {
     }
 
     const totalEntries = await Journal.countDocuments(countQuery);
-    const totalPages = Math.ceil(totalEntries / options.limit);
-
-    res.json({
+    
+    // Only include pagination if page is specified
+    const responseData = {
       success: true,
       data: {
-        entries,
-        pagination: {
-          currentPage: options.page,
-          totalPages,
-          totalEntries,
-          limit: options.limit,
-          hasNext: options.page < totalPages,
-          hasPrev: options.page > 1
-        }
+        entries
       }
-    });
+    };
+    
+    if (options.page) {
+      const totalPages = Math.ceil(totalEntries / options.limit);
+      responseData.data.pagination = {
+        currentPage: options.page,
+        totalPages,
+        totalEntries,
+        limit: options.limit,
+        hasNext: options.page < totalPages,
+        hasPrev: options.page > 1
+      };
+    } else {
+      // If no pagination, include total count
+      responseData.data.totalEntries = totalEntries;
+    }
+
+    res.json(responseData);
 
   } catch (error) {
     console.error('Error fetching journal entries:', error);

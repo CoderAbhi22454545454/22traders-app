@@ -182,8 +182,8 @@ journalSchema.pre('save', function(next) {
 // Static methods for common queries
 journalSchema.statics.findByUserId = function(userId, options = {}) {
   const {
-    page = 1,
-    limit = 10,
+    page,
+    limit,
     sortBy = '-createdAt',
     mood,
     category,
@@ -214,13 +214,20 @@ journalSchema.statics.findByUserId = function(userId, options = {}) {
     query.$text = { $search: search };
   }
 
-  const skip = (page - 1) * limit;
-
-  return this.find(query)
+  let queryBuilder = this.find(query)
     .populate('linkedTrades', 'instrument date pnl result')
-    .sort(sortBy)
-    .skip(skip)
-    .limit(limit);
+    .sort(sortBy);
+
+  // Only apply pagination if page and limit are provided
+  if (page && limit) {
+    const skip = (page - 1) * limit;
+    queryBuilder = queryBuilder.skip(skip).limit(limit);
+  } else if (limit) {
+    // If only limit is provided, just limit the results
+    queryBuilder = queryBuilder.limit(limit);
+  }
+
+  return queryBuilder;
 };
 
 // Static method for analytics

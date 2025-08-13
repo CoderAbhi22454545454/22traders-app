@@ -10,8 +10,7 @@ export const journalApi = {
   // Get all journal entries with filtering and pagination
   async getJournalEntries(options = {}) {
     const {
-      page = 1,
-      limit = 10,
+      limit = 1000, // Increased default limit to show all entries
       sortBy = '-createdAt',
       mood,
       category,
@@ -25,7 +24,6 @@ export const journalApi = {
     } = options;
 
     const params = {
-      page,
       limit,
       sortBy
     };

@@ -31,8 +31,6 @@ const Journal = ({ userId }) => {
   const [filterTag, setFilterTag] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
 
   // Enhanced sample journal entries with trading-specific content
   // Using useMemo to prevent recreation on every render
@@ -100,8 +98,7 @@ const Journal = ({ userId }) => {
       setLoading(true);
       try {
         const options = {
-          page,
-          limit,
+          limit: 1000, // Fetch all entries at once
           sortBy,
           mood: filterTag !== 'all' && entries.some(e => e.mood === filterTag) ? filterTag : undefined,
           search: searchTerm || undefined
@@ -126,7 +123,7 @@ const Journal = ({ userId }) => {
     };
 
     fetchJournalEntries();
-  }, [page, limit, sortBy, filterTag, searchTerm]);
+  }, [sortBy, filterTag, searchTerm]); // Removed page and limit dependencies
 
   const getMoodIcon = (mood) => {
     const moodIcons = {
