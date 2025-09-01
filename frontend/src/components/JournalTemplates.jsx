@@ -17,6 +17,181 @@ import {
 const JournalTemplates = ({ onSelectTemplate, onClose }) => {
   const templates = [
     {
+      id: 'trade-entry-planner',
+      name: 'Trade Entry Planner',
+      description: 'Comprehensive planning template for trade entries with risk management',
+      icon: CurrencyDollarIcon,
+      color: 'emerald',
+      content: `<h2>🎯 Trade Entry Planner - ${new Date().toLocaleDateString()}</h2>
+
+<h3>📋 Trade Setup Information</h3>
+<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
+  <tr style="background: #ecfdf5;">
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Field</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Value</strong></td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Instrument</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[e.g., EUR/USD, Gold, Bitcoin]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Timeframe</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[e.g., M15, H1, H4, Daily]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Setup Type</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Breakout / Pullback / Reversal / Continuation]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Strategy Name</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Your strategy name]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Market Session</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Asian / London / NY / Overlap]</td>
+  </tr>
+</table>
+
+<h3>📊 Technical Analysis</h3>
+<p><strong>Trend Analysis:</strong></p>
+<ul>
+  <li><strong>Higher Timeframe Trend:</strong> [Bullish / Bearish / Sideways]</li>
+  <li><strong>Lower Timeframe Trend:</strong> [Bullish / Bearish / Sideways]</li>
+  <li><strong>Trend Strength:</strong> [Strong / Moderate / Weak]</li>
+</ul>
+
+<p><strong>Key Levels:</strong></p>
+<ul>
+  <li><strong>Resistance:</strong> [Level] - [Description]</li>
+  <li><strong>Support:</strong> [Level] - [Description]</li>
+  <li><strong>Current Price:</strong> [Level]</li>
+  <li><strong>Entry Zone:</strong> [Price range]</li>
+</ul>
+
+<p><strong>Technical Indicators:</strong></p>
+<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
+  <tr style="background: #f0fdf4;">
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Indicator</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Value</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Signal</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Confidence</strong></td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">RSI (14)</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Value]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Bullish/Bearish/Neutral]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[1-10]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">MACD</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Values]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Bullish/Bearish/Neutral]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[1-10]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Moving Averages</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[20, 50, 200 values]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Above/Below/Crossing]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[1-10]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Volume</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[High/Medium/Low]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Confirming/Diverging]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[1-10]</td>
+  </tr>
+</table>
+
+<h3>🎯 Entry Plan</h3>
+<p><strong>Direction:</strong> [Long / Short]</p>
+<p><strong>Entry Strategy:</strong></p>
+<ul>
+  <li><strong>Entry Price:</strong> [Exact entry level]</li>
+  <li><strong>Entry Trigger:</strong> [What condition must be met?]</li>
+  <li><strong>Entry Timeframe:</strong> [Which TF to use for entry]</li>
+  <li><strong>Entry Type:</strong> [Market / Limit / Stop]</li>
+</ul>
+
+<h3>🛡️ Risk Management</h3>
+<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
+  <tr style="background: #fef2f2;">
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Parameter</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Value</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Calculation</strong></td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Stop Loss</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Price level]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Distance in pips/points]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Take Profit 1</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Price level]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[R:R ratio]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Take Profit 2</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Price level]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[R:R ratio]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Position Size</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Lot size / Units]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Based on risk %]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Risk Amount</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[$ amount]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[% of account]</td>
+  </tr>
+</table>
+
+<h3>📈 Market Context</h3>
+<p><strong>Market Conditions:</strong></p>
+<ul>
+  <li><strong>Volatility:</strong> [High / Medium / Low]</li>
+  <li><strong>Liquidity:</strong> [High / Medium / Low]</li>
+  <li><strong>Correlation:</strong> [Positive / Negative / None] with [Instrument]</li>
+  <li><strong>Seasonal Factors:</strong> [Any relevant patterns]</li>
+</ul>
+
+<p><strong>News & Events:</strong></p>
+<ul>
+  <li><strong>Upcoming Events:</strong> [Economic releases, central bank meetings]</li>
+  <li><strong>Event Impact:</strong> [High / Medium / Low]</li>
+  <li><strong>Timing:</strong> [How this affects entry timing]</li>
+</ul>
+
+<h3>✅ Pre-Entry Checklist</h3>
+<div style="background: #f0fdf4; padding: 16px; border-radius: 8px; border-left: 4px solid #10b981;">
+  <ul style="list-style: none; padding: 0;">
+    <li style="margin-bottom: 8px;">☐ Technical setup confirmed on multiple timeframes</li>
+    <li style="margin-bottom: 8px;">☐ Risk management calculated and verified</li>
+    <li style="margin-bottom: 8px;">☐ No conflicting news events within 2 hours</li>
+    <li style="margin-bottom: 8px;">☐ Proper market hours for instrument</li>
+    <li style="margin-bottom: 8px;">☐ Good liquidity conditions</li>
+    <li style="margin-bottom: 8px;">☐ Mental state is optimal (1-10 rating: ___)</li>
+    <li style="margin-bottom: 8px;">☐ Account has sufficient margin</li>
+    <li style="margin-bottom: 8px;">☐ Stop loss and take profit orders ready</li>
+    <li style="margin-bottom: 8px;">☐ Position size calculated correctly</li>
+    <li style="margin-bottom: 8px;">☐ Trade journal entry prepared</li>
+  </ul>
+</div>
+
+<h3>📝 Additional Notes</h3>
+<p>[Any additional observations, concerns, or thoughts about this setup]</p>
+
+<h3>🎯 Confidence Assessment</h3>
+<p><strong>Setup Confidence Level (1-10):</strong> ___</p>
+<p><strong>Expected Holding Time:</strong> [Minutes/Hours/Days]</p>
+<p><strong>Success Probability:</strong> [High/Medium/Low]</p>
+
+<hr>
+<p><em>Planner Created: ${new Date().toLocaleString()} | Next Review: [Time] | Status: [Planning/Ready/Executed]</em></p>`,
+      tags: ['planning', 'entry', 'setup', 'risk-management'],
+      mood: 'analytical'
+    },
+    {
       id: 'daily-review',
       name: 'Daily Trading Review',
       description: 'Reflect on today\'s trading session and key lessons learned',
@@ -874,6 +1049,634 @@ I will trade with discipline, patience, and proper risk management. I will only 
 <p>Additional market observations, hunches, or ideas...</p>`,
       tags: ['ideas', 'insights', 'market', 'analysis'],
       mood: 'analytical'
+    },
+    {
+      id: 'strategy-backtest',
+      name: 'Strategy Backtest Results',
+      description: 'Document strategy backtesting results and performance metrics',
+      icon: ChartBarIcon,
+      color: 'teal',
+      content: `<h2>📊 Strategy Backtest Results - ${new Date().toLocaleDateString()}</h2>
+
+<h3>📋 Strategy Information</h3>
+<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
+  <tr style="background: #f0fdfa;">
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Field</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Value</strong></td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Strategy Name</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Strategy name]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Timeframe</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[e.g., H1, H4, Daily]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Instruments</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[List instruments tested]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Backtest Period</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Start date] to [End date]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Market Conditions</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Trending/Ranging/Volatile]</td>
+  </tr>
+</table>
+
+<h3>📈 Performance Metrics</h3>
+<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
+  <tr style="background: #f0fdfa;">
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Metric</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Value</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Benchmark</strong></td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Total Trades</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Number]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Previous result]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Win Rate</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[%]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Target %]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Profit Factor</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Ratio]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Target ratio]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Average Win</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Amount]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Previous avg]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Average Loss</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Amount]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Previous avg]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Max Drawdown</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Amount]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Acceptable limit]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Sharpe Ratio</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Value]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Target >1.0]</td>
+  </tr>
+</table>
+
+<h3>🎯 Trade Analysis</h3>
+<p><strong>Best Performing Setups:</strong></p>
+<ul>
+  <li><strong>Setup 1:</strong> [Description] - Win Rate: [%] - Avg P&L: [Amount]</li>
+  <li><strong>Setup 2:</strong> [Description] - Win Rate: [%] - Avg P&L: [Amount]</li>
+  <li><strong>Setup 3:</strong> [Description] - Win Rate: [%] - Avg P&L: [Amount]</li>
+</ul>
+
+<p><strong>Worst Performing Setups:</strong></p>
+<ul>
+  <li><strong>Setup 1:</strong> [Description] - Win Rate: [%] - Avg P&L: [Amount]</li>
+  <li><strong>Setup 2:</strong> [Description] - Win Rate: [%] - Avg P&L: [Amount]</li>
+</ul>
+
+<h3>📊 Market Condition Analysis</h3>
+<p><strong>Performance by Market Type:</strong></p>
+<ul>
+  <li><strong>Trending Markets:</strong> Win Rate: [%] | Profit Factor: [Ratio]</li>
+  <li><strong>Ranging Markets:</strong> Win Rate: [%] | Profit Factor: [Ratio]</li>
+  <li><strong>Volatile Markets:</strong> Win Rate: [%] | Profit Factor: [Ratio]</li>
+</ul>
+
+<p><strong>Best Performing Instruments:</strong></p>
+<ol>
+  <li>[Instrument] - [Win Rate]% - [Profit Factor]</li>
+  <li>[Instrument] - [Win Rate]% - [Profit Factor]</li>
+  <li>[Instrument] - [Win Rate]% - [Profit Factor]</li>
+</ol>
+
+<h3>🔍 Key Insights</h3>
+<p><strong>What Worked Well:</strong></p>
+<ul>
+  <li>[List successful aspects of the strategy]</li>
+  <li>[Patterns that led to wins]</li>
+  <li>[Market conditions where it excels]</li>
+</ul>
+
+<p><strong>What Needs Improvement:</strong></p>
+<ul>
+  <li>[Areas where the strategy underperforms]</li>
+  <li>[Common causes of losses]</li>
+  <li>[Market conditions to avoid]</li>
+</ul>
+
+<h3>🔄 Strategy Refinements</h3>
+<p><strong>Recommended Changes:</strong></p>
+<ol>
+  <li><strong>Entry Rules:</strong> [Specific modifications]</li>
+  <li><strong>Exit Rules:</strong> [Specific modifications]</li>
+  <li><strong>Risk Management:</strong> [Specific modifications]</li>
+  <li><strong>Filtering:</strong> [Additional conditions to consider]</li>
+</ol>
+
+<h3>📝 Next Steps</h3>
+<p><strong>Forward Testing Plan:</strong></p>
+<ul>
+  <li><strong>Duration:</strong> [How long to test]</li>
+  <li><strong>Instruments:</strong> [Which to focus on]</li>
+  <li><strong>Success Criteria:</strong> [What metrics to achieve]</li>
+  <li><strong>Review Schedule:</strong> [When to evaluate results]</li>
+</ul>
+
+<hr>
+<p><em>Backtest Completed: ${new Date().toLocaleString()} | Confidence Level: [1-10] | Next Review: [Date]</em></p>`,
+      tags: ['backtest', 'strategy', 'performance', 'analysis'],
+      mood: 'analytical'
+    },
+    {
+      id: 'correlation-analysis',
+      name: 'Correlation Analysis',
+      description: 'Analyze relationships between different instruments and markets',
+      icon: ChartBarIcon,
+      color: 'violet',
+      content: `<h2>🔗 Correlation Analysis - ${new Date().toLocaleDateString()}</h2>
+
+<h3>📊 Correlation Overview</h3>
+<p><strong>Analysis Period:</strong> [Time period analyzed]</strong></p>
+<p><strong>Market Theme:</strong> [Current market environment]</p>
+<p><strong>Update Frequency:</strong> [Daily/Weekly/Monthly]</p>
+
+<h3>💱 Currency Correlations</h3>
+<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
+  <tr style="background: #faf5ff;">
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Pair 1</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Pair 2</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Correlation</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Strength</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Notes</strong></td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">EUR/USD</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">GBP/USD</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[0.85]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Strong</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Comments]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">USD/JPY</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">USD/CHF</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[0.72]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Moderate</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Comments]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">AUD/USD</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">NZD/USD</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[0.91]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Very Strong</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Comments]</td>
+  </tr>
+</table>
+
+<h3>🪙 Commodity Correlations</h3>
+<p><strong>Gold (XAU/USD) Correlations:</strong></p>
+<ul>
+  <li><strong>USD Index:</strong> [Correlation value] - [Strength] - [Explanation]</li>
+  <li><strong>EUR/USD:</strong> [Correlation value] - [Strength] - [Explanation]</li>
+  <li><strong>Oil (WTI):</strong> [Correlation value] - [Strength] - [Explanation]</li>
+  <li><strong>Bonds:</strong> [Correlation value] - [Strength] - [Explanation]</li>
+</ul>
+
+<p><strong>Oil (WTI) Correlations:</strong></p>
+<ul>
+  <li><strong>CAD/JPY:</strong> [Correlation value] - [Strength] - [Explanation]</li>
+  <li><strong>USD/RUB:</strong> [Correlation value] - [Strength] - [Explanation]</li>
+  <li><strong>Stock Indices:</strong> [Correlation value] - [Strength] - [Explanation]</li>
+</ul>
+
+<h3>📈 Stock Market Correlations</h3>
+<p><strong>Major Indices:</strong></p>
+<ul>
+  <li><strong>S&P 500 vs NASDAQ:</strong> [Correlation value] - [Strength]</li>
+  <li><strong>DAX vs FTSE:</strong> [Correlation value] - [Strength]</li>
+  <li><strong>Nikkei vs Hang Seng:</strong> [Correlation value] - [Strength]</li>
+</ul>
+
+<p><strong>Currency vs Stocks:</strong></p>
+<ul>
+  <li><strong>USD/JPY vs S&P 500:</strong> [Correlation value] - [Strength] - [Risk-on/off indicator]</li>
+  <li><strong>EUR/USD vs DAX:</strong> [Correlation value] - [Strength] - [Risk-on/off indicator]</li>
+</ul>
+
+<h3>🌍 Cross-Asset Correlations</h3>
+<p><strong>Risk-On vs Risk-Off Assets:</strong></p>
+<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
+  <tr style="background: #faf5ff;">
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Risk-On Asset</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Risk-Off Asset</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Correlation</strong></td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">S&P 500</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">USD/JPY</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Value]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Gold</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">USD Index</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Value]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Oil</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">CAD/JPY</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Value]</td>
+  </tr>
+</table>
+
+<h3>⏰ Time-Based Correlations</h3>
+<p><strong>Session Correlations:</strong></p>
+<ul>
+  <li><strong>Asian Session:</strong> [Key correlations during Asian hours]</li>
+  <li><strong>London Session:</strong> [Key correlations during London hours]</li>
+  <li><strong>NY Session:</strong> [Key correlations during NY hours]</li>
+  <li><strong>Overlap Periods:</strong> [Correlations during session overlaps]</li>
+</ul>
+
+<p><strong>Weekly Patterns:</strong></p>
+<ul>
+  <li><strong>Monday:</strong> [Typical correlation behavior]</li>
+  <li><strong>Wednesday:</strong> [Typical correlation behavior]</li>
+  <li><strong>Friday:</strong> [Typical correlation behavior]</li>
+</ul>
+
+<h3>🎯 Trading Implications</h3>
+<p><strong>Portfolio Management:</strong></p>
+<ul>
+  <li><strong>Diversification:</strong> [How to use correlations for portfolio balance]</li>
+  <li><strong>Risk Management:</strong> [Avoiding over-exposure to correlated assets]</li>
+  <li><strong>Hedging Opportunities:</strong> [Using correlations for hedging]</li>
+</ul>
+
+<p><strong>Entry/Exit Timing:</strong></p>
+<ul>
+  <li><strong>Confirmation Trades:</strong> [Using correlations to confirm setups]</li>
+  <li><strong>Divergence Trades:</strong> [Trading correlation breakdowns]</li>
+  <li><strong>News Impact:</strong> [How news affects correlations]</li>
+</ul>
+
+<h3>📊 Correlation Changes</h3>
+<p><strong>Recent Changes:</strong></p>
+<ul>
+  <li><strong>Strengthening:</strong> [Pairs becoming more correlated]</li>
+  <li><strong>Weakening:</strong> [Pairs becoming less correlated]</li>
+  <li><strong>New Patterns:</strong> [Emerging correlation relationships]</li>
+</ul>
+
+<p><strong>Market Events Impact:</strong></p>
+<ul>
+  <li><strong>Central Bank Actions:</strong> [How they affect correlations]</li>
+  <li><strong>Economic Data:</strong> [Impact on correlation strength]</li>
+  <li><strong>Geopolitical Events:</strong> [Correlation shifts during events]</li>
+</ul>
+
+<h3>📝 Notes & Observations</h3>
+<p>[Additional insights, patterns noticed, and thoughts about correlations]</p>
+
+<hr>
+<p><em>Analysis Date: ${new Date().toLocaleString()} | Next Update: [Date] | Confidence Level: [1-10]</em></p>`,
+      tags: ['correlation', 'analysis', 'relationships', 'markets'],
+      mood: 'analytical'
+    },
+    {
+      id: 'economic-calendar',
+      name: 'Economic Calendar Analysis',
+      description: 'Plan trading around economic events and news releases',
+      icon: CalendarDaysIcon,
+      color: 'amber',
+      content: `<h2>📅 Economic Calendar Analysis - ${new Date().toLocaleDateString()}</h2>
+
+<h3>📊 This Week's High-Impact Events</h3>
+<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
+  <tr style="background: #fffbeb;">
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Date & Time</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Event</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Currency</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Impact</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Previous</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Forecast</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Notes</strong></td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Date] [Time]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Event name]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Currency]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">High</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Previous value]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Forecast value]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Important notes]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Date] [Time]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Event name]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Currency]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">High</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Previous value]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Forecast value]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Important notes]</td>
+  </tr>
+</table>
+
+<h3>🎯 Medium-Impact Events</h3>
+<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
+  <tr style="background: #fef3c7;">
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Date & Time</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Event</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Currency</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Impact</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Previous</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Forecast</strong></td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Date] [Time]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Event name]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Currency]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Medium</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Previous value]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Forecast value]</td>
+  </tr>
+</table>
+
+<h3>🏛️ Central Bank Events</h3>
+<p><strong>This Week:</strong></p>
+<ul>
+  <li><strong>[Central Bank]:</strong> [Event type] - [Date] - [Expected outcome]</li>
+  <li><strong>[Central Bank]:</strong> [Event type] - [Date] - [Expected outcome]</li>
+</ul>
+
+<p><strong>Next Week:</strong></p>
+<ul>
+  <li><strong>[Central Bank]:</strong> [Event type] - [Date] - [Expected outcome]</li>
+</ul>
+
+<h3>📊 Market Expectations</h3>
+<p><strong>Consensus Views:</strong></p>
+<ul>
+  <li><strong>Rate Decisions:</strong> [Expected changes and reasoning]</li>
+  <li><strong>Economic Data:</strong> [Market expectations vs reality]</li>
+  <li><strong>Forward Guidance:</strong> [Expected policy signals]</li>
+</ul>
+
+<p><strong>Potential Surprises:</strong></p>
+<ul>
+  <li><strong>Data Surprises:</strong> [What could surprise the market]</li>
+  <li><strong>Policy Changes:</strong> [Unexpected policy shifts]</li>
+  <li><strong>Forward Guidance:</strong> [Unexpected signals]</li>
+</ul>
+
+<h3>🎯 Trading Strategy</h3>
+<p><strong>Pre-Event Positioning:</strong></p>
+<ul>
+  <li><strong>High-Impact Events:</strong> [How to position before major events]</li>
+  <li><strong>Risk Management:</strong> [Position sizing and stop losses]</li>
+  <li><strong>Timing:</strong> [When to enter/exit positions]</li>
+</ul>
+
+<p><strong>Event Trading:</strong></p>
+<ul>
+  <li><strong>Scalping Strategy:</strong> [Quick trades during volatility]</li>
+  <li><strong>Breakout Strategy:</strong> [Trading post-event breakouts]</li>
+  <li><strong>Fade Strategy:</strong> [Fading initial moves]</li>
+</ul>
+
+<h3>⚠️ Risk Management</h3>
+<p><strong>Position Sizing:</strong></p>
+<ul>
+  <li><strong>High-Impact Events:</strong> [Reduced position sizes]</li>
+  <li><strong>Medium-Impact Events:</strong> [Normal position sizes]</li>
+  <li><strong>Low-Impact Events:</strong> [Full position sizes]</li>
+</ul>
+
+<p><strong>Stop Loss Strategy:</strong></p>
+<ul>
+  <li><strong>Wider Stops:</strong> [During high volatility]</li>
+  <li><strong>News Stops:</strong> [Special stop loss rules for news]</li>
+  <li><strong>Time Stops:</strong> [Exit if no move within timeframe]</li>
+</ul>
+
+<h3>📈 Historical Performance</h3>
+<p><strong>Recent Event Impact:</strong></p>
+<ul>
+  <li><strong>Last NFP:</strong> [Impact on USD pairs]</li>
+  <li><strong>Last CPI:</strong> [Impact on inflation expectations]</li>
+  <li><strong>Last Rate Decision:</strong> [Market reaction]</li>
+</ul>
+
+<p><strong>Pattern Recognition:</strong></p>
+<ul>
+  <li><strong>Typical Moves:</strong> [Average pip movement]</li>
+  <li><strong>Duration:</strong> [How long moves last]</li>
+  <li><strong>Reversals:</strong> [Common reversal patterns]</li>
+</ul>
+
+<h3>📝 Notes & Observations</h3>
+<p>[Additional insights about specific events, market sentiment, and trading opportunities]</p>
+
+<h3>🔄 Weekly Review</h3>
+<p><strong>Events That Moved Markets:</strong></p>
+<ul>
+  <li>[Event 1] - [Impact] - [Lessons learned]</li>
+  <li>[Event 2] - [Impact] - [Lessons learned]</li>
+</ul>
+
+<p><strong>Strategy Adjustments:</strong></p>
+<ul>
+  <li>[What worked well]</li>
+  <li>[What needs improvement]</li>
+  <li>[Changes for next week]</li>
+</ul>
+
+<hr>
+<p><em>Calendar Updated: ${new Date().toLocaleString()} | Next Review: [Date] | Market Sentiment: [Bullish/Bearish/Neutral]</em></p>`,
+      tags: ['economic', 'calendar', 'news', 'events'],
+      mood: 'analytical'
+    },
+    {
+      id: 'position-sizing-calculator',
+      name: 'Position Sizing Calculator',
+      description: 'Calculate optimal position sizes based on risk management rules',
+      icon: CogIcon,
+      color: 'slate',
+      content: `<h2>🧮 Position Sizing Calculator - ${new Date().toLocaleDateString()}</h2>
+
+<h3>📊 Account Information</h3>
+<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
+  <tr style="background: #f8fafc;">
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Field</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Value</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Notes</strong></td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Account Balance</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">$[Amount]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Current account value</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Risk Per Trade</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[%]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Maximum risk per trade</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Daily Loss Limit</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[%]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Maximum daily loss</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Max Open Positions</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Number]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Maximum concurrent trades</td>
+  </tr>
+</table>
+
+<h3>🎯 Trade Setup</h3>
+<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
+  <tr style="background: #f8fafc;">
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Parameter</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Value</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Calculation</strong></td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Instrument</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[e.g., EUR/USD]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Currency pair</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Entry Price</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Price]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Entry level</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Stop Loss</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Price]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Stop loss level</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Risk Distance</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Pips/Points]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Entry to stop loss</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Pip Value</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">$[Amount]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Value per pip</td>
+  </tr>
+</table>
+
+<h3>🧮 Position Size Calculations</h3>
+<p><strong>Method 1: Fixed Risk Percentage</strong></p>
+<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
+  <tr style="background: #f0fdf4;">
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Calculation</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Formula</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Result</strong></td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Risk Amount</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Account × Risk %</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">$[Amount]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Position Size</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Risk Amount ÷ (Risk Distance × Pip Value)</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Lot Size]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Standard Lots</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Lot Size] ÷ 100,000</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Standard Lots]</td>
+  </tr>
+</table>
+
+<p><strong>Method 2: Kelly Criterion</strong></p>
+<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
+  <tr style="background: #f0fdf4;">
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Parameter</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Value</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Notes</strong></td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Win Rate</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[%]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Historical win rate</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Average Win</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Amount]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Average winning trade</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Average Loss</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Amount]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">Average losing trade</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Kelly %</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[%]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">(Win% × Avg Win - Loss% × Avg Loss) ÷ Avg Win</td>
+  </tr>
+</table>
+
+<h3>⚠️ Risk Management Checks</h3>
+<div style="background: #fef2f2; padding: 16px; border-radius: 8px; border-left: 4px solid #ef4444;">
+  <ul style="list-style: none; padding: 0;">
+    <li style="margin-bottom: 8px;">☐ Position size doesn't exceed max risk per trade</li>
+    <li style="margin-bottom: 8px;">☐ Total open risk doesn't exceed daily loss limit</li>
+    <li style="margin-bottom: 8px;">☐ Position size allows for proper stop loss placement</li>
+    <li style="margin-bottom: 8px;">☐ Account has sufficient margin for position</li>
+    <li style="margin-bottom: 8px;">☐ Position size is appropriate for market volatility</li>
+  </ul>
+</div>
+
+<h3>📊 Position Size Summary</h3>
+<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
+  <tr style="background: #f8fafc;">
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Method</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Position Size</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Risk Amount</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Recommendation</strong></td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Fixed Risk %</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Lot Size]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">$[Amount]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Safe/Moderate/Aggressive]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;">Kelly Criterion</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Lot Size]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">$[Amount]</td>
+    <td style="border: 1px solid #ccc; padding: 8px;">[Safe/Moderate/Aggressive]</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Final Choice</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>[Lot Size]</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>$[Amount]</strong></td>
+    <td style="border: 1px solid #ccc; padding: 8px;"><strong>[Reasoning]</strong></td>
+  </tr>
+</table>
+
+<h3>📝 Notes & Adjustments</h3>
+<p><strong>Market Conditions:</strong> [How current volatility affects position sizing]</p>
+<p><strong>Account Status:</strong> [Any special considerations for current account state]</p>
+<p><strong>Strategy Adjustments:</strong> [Modifications based on recent performance]</p>
+
+<hr>
+<p><em>Calculation Date: ${new Date().toLocaleString()} | Risk Level: [Low/Medium/High] | Confidence: [1-10]</em></p>`,
+      tags: ['position-sizing', 'risk-management', 'calculator', 'math'],
+      mood: 'analytical'
     }
   ];
 
@@ -886,6 +1689,11 @@ I will trade with discipline, patience, and proper risk management. I will only 
       yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100',
       indigo: 'bg-indigo-50 border-indigo-200 text-indigo-800 hover:bg-indigo-100',
       orange: 'bg-orange-50 border-orange-200 text-orange-800 hover:bg-orange-100',
+      emerald: 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100',
+      teal: 'bg-teal-50 border-teal-200 text-teal-800 hover:bg-teal-100',
+      violet: 'bg-violet-50 border-violet-200 text-violet-800 hover:bg-violet-100',
+      amber: 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100',
+      slate: 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100',
     };
     return colors[color] || colors.blue;
   };

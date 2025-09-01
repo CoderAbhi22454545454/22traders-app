@@ -326,7 +326,7 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
 
   return (
     <Transition appear show={isOpen} as={React.Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={handleClose}>
+      <Dialog as="div" className="relative z-50" onClose={() => {}}>
         <Transition.Child
           as={React.Fragment}
           enter="ease-out duration-300"
