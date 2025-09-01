@@ -787,13 +787,13 @@ const Dashboard = ({ userId }) => {
                 Refresh
               </button>
               
-              <button
-                onClick={() => setIsModalOpen(true)}
+              <Link
+                to="/pre-trade-checklist"
                 className="btn-primary py-1.5"
               >
                 <PlusIcon className="h-4 w-4 mr-1" />
-                Add Trade
-              </button>
+                New Trade
+              </Link>
             </div>
           </div>
           

@@ -713,4 +713,147 @@ export const apiRequest = async (method, endpoint, data = null) => {
   }
 };
 
+// Trade Checklist API functions
+export const checklistAPI = {
+  // Get all checklists for a user
+  getChecklists: async (userId, filters = {}) => {
+    try {
+      const params = { ...filters };
+      if (userId) params.userId = userId;
+      
+      const response = await api.get('/checklists', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Get default checklist for user
+  getDefaultChecklist: async (userId) => {
+    try {
+      const response = await api.get('/checklists/default', { 
+        params: { userId } 
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Get single checklist by ID
+  getChecklist: async (checklistId) => {
+    try {
+      const response = await api.get(`/checklists/${checklistId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Create new checklist
+  createChecklist: async (checklistData) => {
+    try {
+      const response = await api.post('/checklists', checklistData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Update checklist
+  updateChecklist: async (checklistId, checklistData) => {
+    try {
+      const response = await api.put(`/checklists/${checklistId}`, checklistData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Delete checklist
+  deleteChecklist: async (checklistId) => {
+    try {
+      const response = await api.delete(`/checklists/${checklistId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Duplicate checklist
+  duplicateChecklist: async (checklistId) => {
+    try {
+      const response = await api.post(`/checklists/${checklistId}/duplicate`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Get checklist results for a specific checklist
+  getChecklistResults: async (checklistId, filters = {}) => {
+    try {
+      const response = await api.get(`/checklists/${checklistId}/results`, { 
+        params: filters 
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Get all checklist results for a user
+  getAllChecklistResults: async (userId, filters = {}) => {
+    try {
+      const params = { ...filters };
+      if (userId) params.userId = userId;
+      
+      const response = await api.get('/checklists/results/all', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Get checklist result for a specific trade
+  getTradeChecklistResult: async (tradeId) => {
+    try {
+      const response = await api.get(`/checklists/results/trade/${tradeId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Create or update checklist result
+  saveChecklistResult: async (resultData) => {
+    try {
+      const response = await api.post('/checklists/results', resultData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Update checklist result
+  updateChecklistResult: async (resultId, resultData) => {
+    try {
+      const response = await api.put(`/checklists/results/${resultId}`, resultData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Delete checklist result
+  deleteChecklistResult: async (resultId) => {
+    try {
+      const response = await api.delete(`/checklists/results/${resultId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  }
+};
+
 export default api; 

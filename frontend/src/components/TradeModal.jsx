@@ -15,7 +15,7 @@ const EMOTION_OPTIONS = [
 // Limited pair options as requested
 const PAIR_OPTIONS = ['XAUUSD', 'BTCUSD', 'EURUSD'];
 
-const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editTrade = null }) => {
+const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editTrade = null, checklistData = null }) => {
   const [formData, setFormData] = useState({
     tradeNumber: '',
     tradePair: '',
@@ -426,6 +426,50 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
                         <XMarkIcon className="h-6 w-6" />
                       </button>
                     </div>
+
+                    {/* Pre-Trade Checklist Data */}
+                    {checklistData && (
+                      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-semibold text-blue-900">
+                            Pre-Trade Checklist Completed
+                          </h4>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            checklistData.setupQuality === 'excellent' ? 'bg-green-100 text-green-800' :
+                            checklistData.setupQuality === 'good' ? 'bg-blue-100 text-blue-800' :
+                            checklistData.setupQuality === 'fair' ? 'bg-yellow-100 text-yellow-800' :
+                            checklistData.setupQuality === 'poor' ? 'bg-orange-100 text-orange-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {checklistData.setupQuality} quality
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                          <div>
+                            <span className="text-blue-700 font-medium">Checklist:</span>
+                            <p className="text-blue-900">{checklistData.checklistName}</p>
+                          </div>
+                          <div>
+                            <span className="text-blue-700 font-medium">Completion:</span>
+                            <p className="text-blue-900">{checklistData.completionPercentage}%</p>
+                          </div>
+                          <div>
+                            <span className="text-blue-700 font-medium">Quality Score:</span>
+                            <p className="text-blue-900">{checklistData.qualityScore || 'N/A'}/10</p>
+                          </div>
+                          <div>
+                            <span className="text-blue-700 font-medium">Items:</span>
+                            <p className="text-blue-900">{checklistData.items?.length || 0} completed</p>
+                          </div>
+                        </div>
+                        {checklistData.overallNotes && (
+                          <div className="mt-3">
+                            <span className="text-blue-700 font-medium text-sm">Notes:</span>
+                            <p className="text-blue-900 text-sm mt-1">{checklistData.overallNotes}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Form Content */}
                     <form onSubmit={handleSubmit} className="space-y-4">

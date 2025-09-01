@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { XMarkIcon, PhotoIcon } from '@heroicons/react/24/outline';
-import { tradesAPI, formatCurrency, formatDateTime } from '../utils/api';
+import { XMarkIcon, PhotoIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
+import { tradesAPI, formatCurrency, formatDateTime, checklistAPI } from '../utils/api';
 import TradeScreenshot from './TradeScreenshot';
 import { useNotifications } from './Notifications';
 import InstrumentIcon from './shared/InstrumentIcon';
+import ChecklistResults from './ChecklistResults';
+import TradeChecklistExecutor from './TradeChecklistExecutor';
 
 const TradeDetail = ({ userId }) => {
   const { id } = useParams();
@@ -20,8 +22,15 @@ const TradeDetail = ({ userId }) => {
   const [previewUrl, setPreviewUrl] = useState('');
   const { success, error } = useNotifications();
 
+  // Checklist state
+  const [showChecklistExecutor, setShowChecklistExecutor] = useState(false);
+  const [selectedChecklist, setSelectedChecklist] = useState(null);
+  const [availableChecklists, setAvailableChecklists] = useState([]);
+  const [showChecklistSelector, setShowChecklistSelector] = useState(false);
+
   useEffect(() => {
     fetchTrade();
+    fetchAvailableChecklists();
   }, [id]);
 
   const fetchTrade = async () => {
@@ -141,6 +150,35 @@ const TradeDetail = ({ userId }) => {
     }
   };
 
+  // Checklist methods
+  const fetchAvailableChecklists = async () => {
+    try {
+      const response = await checklistAPI.getChecklists(userId, { isActive: true });
+      setAvailableChecklists(response.checklists || []);
+    } catch (err) {
+      console.error('Error fetching checklists:', err);
+    }
+  };
+
+  const handleStartChecklist = (checklist) => {
+    setSelectedChecklist(checklist);
+    setShowChecklistExecutor(true);
+    setShowChecklistSelector(false);
+  };
+
+  const handleChecklistComplete = (result) => {
+    setShowChecklistExecutor(false);
+    setSelectedChecklist(null);
+    success(`Checklist "${result.checklistName}" completed with ${result.completionPercentage}% completion!`);
+    // Refresh the page to show the new checklist result
+    window.location.reload();
+  };
+
+  const handleChecklistClose = () => {
+    setShowChecklistExecutor(false);
+    setSelectedChecklist(null);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -175,6 +213,13 @@ const TradeDetail = ({ userId }) => {
             <div className="flex items-center space-x-4">
               {!editing ? (
                 <>
+                  <button
+                    onClick={() => setShowChecklistSelector(true)}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <ClipboardDocumentCheckIcon className="w-4 h-4 mr-2" />
+                    Start Checklist
+                  </button>
                   <button
                     onClick={handleEdit}
                     className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -720,8 +765,97 @@ const TradeDetail = ({ userId }) => {
               </div>
             </div>
           </div>
+
+          {/* Checklist Results Section */}
+          <div className="mt-8">
+            <ChecklistResults 
+              userId={userId} 
+              tradeId={id}
+              onResultClick={(result) => {
+                // Handle result click if needed
+                console.log('Checklist result clicked:', result);
+              }}
+            />
+          </div>
         </div>
       </main>
+
+      {/* Checklist Selector Modal */}
+      {showChecklistSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Select Checklist</h3>
+              <button
+                onClick={() => setShowChecklistSelector(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {availableChecklists.length === 0 ? (
+              <div className="text-center py-8">
+                <ClipboardDocumentCheckIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 mb-4">No active checklists available.</p>
+                <button
+                  onClick={() => {
+                    setShowChecklistSelector(false);
+                    navigate('/checklists');
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Create Checklist
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {availableChecklists.map((checklist) => (
+                  <button
+                    key={checklist._id}
+                    onClick={() => handleStartChecklist(checklist)}
+                    className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-gray-900">{checklist.name}</h4>
+                        <p className="text-sm text-gray-600">{checklist.description}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            {checklist.totalSteps} steps
+                          </span>
+                          {checklist.isDefault && (
+                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <ClipboardDocumentCheckIcon className="w-5 h-5 text-gray-400" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Checklist Executor Modal */}
+      {showChecklistExecutor && selectedChecklist && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <TradeChecklistExecutor
+              userId={userId}
+              tradeId={id}
+              checklistId={selectedChecklist._id}
+              initialChecklist={selectedChecklist}
+              onComplete={handleChecklistComplete}
+              onClose={handleChecklistClose}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

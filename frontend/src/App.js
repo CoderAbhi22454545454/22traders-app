@@ -11,6 +11,8 @@ import Signup from './components/Signup';
 import PWAInstall from './components/PWAInstall';
 import PWAUpdate from './components/PWAUpdate';
 import PWAStatus from './components/PWAStatus';
+import TradeChecklists from './components/TradeChecklists';
+import PreTradeChecklist from './components/PreTradeChecklist';
 import { NotificationProvider } from './components/Notifications';
 import { getDB } from './utils/indexedDB'; // Add IndexedDB import
 import { 
@@ -20,7 +22,8 @@ import {
   BookOpenIcon,
   UserCircleIcon,
   Cog6ToothIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline';
 import './index.css';
 
@@ -33,6 +36,7 @@ const Navigation = ({ user, onLogout }) => {
     { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
     { name: 'Trades', href: '/trades', icon: DocumentTextIcon },
     { name: 'Journal', href: '/journal', icon: BookOpenIcon },
+    { name: 'Checklists', href: '/checklists', icon: ClipboardDocumentCheckIcon },
   ];
 
   const isActive = (href) => location.pathname === href;
@@ -249,6 +253,14 @@ function App() {
               <Route 
                 path="/journal/:id/edit" 
                 element={<JournalEntry userId={user.id} mode="edit" />} 
+              />
+              <Route 
+                path="/checklists" 
+                element={<TradeChecklists userId={user.id} />} 
+              />
+              <Route 
+                path="/pre-trade-checklist" 
+                element={<PreTradeChecklist userId={user.id} />} 
               />
               {/* Catch all route */}
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

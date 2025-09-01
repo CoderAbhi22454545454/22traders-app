@@ -1262,11 +1262,11 @@ const Trades = ({ userId }) => {
 
               {/* Add Trade Button */}
               <Link
-                to="/dashboard"
+                to="/pre-trade-checklist"
                 className="btn-primary"
               >
                 <PlusIcon className="h-4 w-4 mr-2" />
-                Add Trade
+                New Trade
               </Link>
             </div>
           </div>
