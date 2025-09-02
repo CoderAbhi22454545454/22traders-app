@@ -162,6 +162,47 @@ const tradeSchema = new mongoose.Schema({
       trim: true
     }
   },
+  // Pre-trade checklist data
+  preTradeChecklist: {
+    checklistId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'TradeChecklist'
+    },
+    checklistName: {
+      type: String,
+      trim: true
+    },
+    completionPercentage: {
+      type: Number,
+      min: 0,
+      max: 100
+    },
+    qualityScore: {
+      type: Number,
+      min: 1,
+      max: 10
+    },
+    setupQuality: {
+      type: String,
+      enum: ['excellent', 'good', 'fair', 'poor', 'terrible']
+    },
+    items: [{
+      itemId: mongoose.Schema.Types.ObjectId,
+      title: String,
+      isCompleted: Boolean,
+      value: mongoose.Schema.Types.Mixed,
+      notes: String,
+      order: Number
+    }],
+    overallNotes: {
+      type: String,
+      trim: true,
+      maxlength: 1000
+    },
+    completedAt: {
+      type: Date
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now

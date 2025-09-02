@@ -21,7 +21,8 @@ const TradeChecklistExecutor = ({
   checklistId, 
   onComplete, 
   onClose,
-  initialChecklist = null 
+  initialChecklist = null,
+  isPreTrade = false
 }) => {
   const [checklist, setChecklist] = useState(initialChecklist);
   const [currentStep, setCurrentStep] = useState(0);
@@ -99,7 +100,7 @@ const TradeChecklistExecutor = ({
 
       const resultData = {
         userId,
-        tradeId,
+        tradeId: isPreTrade ? null : tradeId,
         checklistId,
         items,
         overallNotes,
@@ -107,19 +108,37 @@ const TradeChecklistExecutor = ({
         isCompleted: true
       };
 
-      await checklistAPI.saveChecklistResult(resultData);
-      
-      if (onComplete) {
-        onComplete({
-          checklistId,
-          checklistName: checklist.name,
-          completionPercentage: calculateCompletionPercentage(),
-          qualityScore,
-          setupQuality: assessSetupQuality()
-        });
+      if (isPreTrade) {
+        // For pre-trade mode, just return the data without saving to backend
+        if (onComplete) {
+          onComplete({
+            checklistId,
+            checklistName: checklist.name,
+            completionPercentage: calculateCompletionPercentage(),
+            qualityScore,
+            setupQuality: assessSetupQuality(),
+            items,
+            overallNotes,
+            completedAt: new Date()
+          });
+        }
+      } else {
+        // For post-trade mode, save to backend
+        await checklistAPI.saveChecklistResult(resultData);
+        
+        if (onComplete) {
+          onComplete({
+            checklistId,
+            checklistName: checklist.name,
+            completionPercentage: calculateCompletionPercentage(),
+            qualityScore,
+            setupQuality: assessSetupQuality()
+          });
+        }
       }
-    } catch (err) {
-      setError(err.message || 'Failed to save checklist result');
+    } catch (error) {
+      console.error('Error saving checklist result:', error);
+      setError('Failed to save checklist result');
     }
   };
 

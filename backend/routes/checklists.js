@@ -30,7 +30,7 @@ const checklistValidation = [
 
 // Validation rules for checklist results
 const checklistResultValidation = [
-  body('tradeId').isMongoId().withMessage('Valid trade ID is required'),
+  body('tradeId').optional().isMongoId().withMessage('Valid trade ID is required'),
   body('checklistId').isMongoId().withMessage('Valid checklist ID is required'),
   body('items').isArray().withMessage('Items must be an array'),
   body('items.*.itemId').isMongoId().withMessage('Valid item ID is required'),
@@ -406,10 +406,12 @@ router.post('/results', checklistResultValidation, async (req, res) => {
       isCompleted
     } = req.body;
 
-    // Verify trade exists
-    const trade = await Trade.findById(tradeId);
-    if (!trade) {
-      return res.status(404).json({ message: 'Trade not found' });
+    // Verify trade exists (only if tradeId is provided)
+    if (tradeId) {
+      const trade = await Trade.findById(tradeId);
+      if (!trade) {
+        return res.status(404).json({ message: 'Trade not found' });
+      }
     }
 
     // Verify checklist exists
@@ -418,8 +420,11 @@ router.post('/results', checklistResultValidation, async (req, res) => {
       return res.status(404).json({ message: 'Checklist not found' });
     }
 
-    // Check if result already exists for this trade
-    let result = await TradeChecklistResult.findOne({ tradeId, checklistId });
+    // Check if result already exists for this trade (only if tradeId exists)
+    let result = null;
+    if (tradeId) {
+      result = await TradeChecklistResult.findOne({ tradeId, checklistId });
+    }
     
     if (result) {
       // Update existing result

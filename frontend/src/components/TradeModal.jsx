@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon, PhotoIcon, CheckIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { tradesAPI, formatCurrency, formatDate } from '../utils/api';
+import { XMarkIcon, PhotoIcon, CheckIcon, ExclamationTriangleIcon,  ChevronRightIcon,   StarIcon, ClockIcon, DocumentTextIcon, CheckCircleIcon, XCircleIcon, ArrowPathIcon, ArrowRightIcon, ClipboardDocumentCheckIcon, PlusIcon, TagIcon } from '@heroicons/react/24/outline';
+import { tradesAPI, formatCurrency, formatDate, checklistAPI } from '../utils/api';
 import { useNotifications } from './Notifications';
 import InstrumentIcon from './shared/InstrumentIcon';
+import TradeChecklistExecutor from './TradeChecklistExecutor';
+
 
 // Predefined emotion options
 const EMOTION_OPTIONS = [
@@ -16,6 +18,12 @@ const EMOTION_OPTIONS = [
 const PAIR_OPTIONS = ['XAUUSD', 'BTCUSD', 'EURUSD'];
 
 const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editTrade = null, checklistData = null }) => {
+  // Multi-step state
+  const [currentStep, setCurrentStep] = useState(editTrade ? 1 : 0); // 0: checklist, 1: trade form
+  const [availableChecklists, setAvailableChecklists] = useState([]);
+  const [selectedChecklist, setSelectedChecklist] = useState(null);
+  const [checklistResult, setChecklistResult] = useState(checklistData || null);
+  const [showChecklistExecutor, setShowChecklistExecutor] = useState(false);
   const [formData, setFormData] = useState({
     tradeNumber: '',
     tradePair: '',
@@ -55,8 +63,11 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
       fetchExistingTrades();
       if (isEditMode && editTrade) {
         populateFormForEdit();
+        setCurrentStep(1); // Skip checklist for edit mode
       } else {
         resetForm();
+        fetchAvailableChecklists();
+        setCurrentStep(0); // Start with checklist for new trades
         // Auto-fill trade number for new trades
         if (userId) {
           fetchTradeCount();
@@ -140,6 +151,45 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchAvailableChecklists = async () => {
+    try {
+      const response = await checklistAPI.getChecklists(userId, { isActive: true });
+      setAvailableChecklists(response.checklists || []);
+    } catch (err) {
+      console.error('Error fetching checklists:', err);
+    }
+  };
+
+  const handleChecklistSelect = (checklist) => {
+    setSelectedChecklist(checklist);
+    setShowChecklistExecutor(true);
+  };
+
+  const handleChecklistComplete = (result) => {
+    setChecklistResult(result);
+    setShowChecklistExecutor(false);
+    setSelectedChecklist(null);
+    setCurrentStep(1); // Move to trade form
+    success('Pre-trade checklist completed! Now enter your trade details.');
+  };
+
+  const handleChecklistClose = () => {
+    setShowChecklistExecutor(false);
+    setSelectedChecklist(null);
+  };
+
+  const handleSkipChecklist = () => {
+    if (window.confirm('Are you sure you want to skip the checklist? This may lead to lower quality trades.')) {
+      setCurrentStep(1);
+      warning('Checklist skipped. Consider using a checklist for better trade quality.');
+    }
+  };
+
+  const goBackToChecklist = () => {
+    setCurrentStep(0);
+    setChecklistResult(null);
   };
 
   const resetForm = () => {
@@ -284,7 +334,17 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
         instrument: formData.tradePair,
         lotSize: formData.positionSize ? parseFloat(formData.positionSize) : undefined,
         result: formData.tradeOutcome?.toLowerCase(),
-        notes: formData.additionalNotes
+        notes: formData.additionalNotes,
+        // Include pre-trade checklist data
+        preTradeChecklist: checklistResult ? {
+          checklistId: checklistResult.checklistId,
+          checklistName: checklistResult.checklistName,
+          completionPercentage: checklistResult.completionPercentage,
+          qualityScore: checklistResult.qualityScore,
+          setupQuality: checklistResult.setupQuality,
+          items: checklistResult.items,
+          overallNotes: checklistResult.overallNotes
+        } : null
       };
 
       let savedTrade;
@@ -293,6 +353,26 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
         success('Trade updated successfully!');
       } else {
         savedTrade = await tradesAPI.createTrade(tradeData);
+        
+        // Save checklist result to database if we have one
+        if (checklistResult && savedTrade.trade) {
+          try {
+            const checklistResultData = {
+              userId,
+              tradeId: savedTrade.trade._id,
+              checklistId: checklistResult.checklistId,
+              items: checklistResult.items,
+              overallNotes: checklistResult.overallNotes,
+              qualityScore: checklistResult.qualityScore,
+              isCompleted: true
+            };
+            await checklistAPI.saveChecklistResult(checklistResultData);
+          } catch (checklistErr) {
+            console.error('Error saving checklist result:', checklistErr);
+            warning('Trade saved but checklist result could not be saved.');
+          }
+        }
+        
         success('Trade created successfully!');
       }
       
@@ -415,9 +495,24 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
                   <div className="flex-1 p-4">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-4">
-                      <Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
-                        {isEditMode ? 'Edit Trade' : `Trade Entry for ${selectedDate?.toISOString().split('T')[0]}`}
-                      </Dialog.Title>
+                      <div className="flex items-center space-x-4">
+                        <Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
+                          {isEditMode ? 'Edit Trade' : 
+                           currentStep === 0 ? 'Pre-Trade Setup' : 
+                           `Trade Entry for ${selectedDate?.toISOString().split('T')[0]}`}
+                        </Dialog.Title>
+                        {!isEditMode && (
+                          <div className="flex items-center space-x-2 text-sm text-gray-500">
+                            <span className={`px-2 py-1 rounded-full text-xs ${currentStep === 0 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
+                              1. Checklist
+                            </span>
+                            <ChevronRightIcon className="w-4 h-4" />
+                            <span className={`px-2 py-1 rounded-full text-xs ${currentStep === 1 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
+                              2. Trade Details
+                            </span>
+                          </div>
+                        )}
+                      </div>
                       <button
                         onClick={handleClose}
                         disabled={submitting}
@@ -427,49 +522,152 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
                       </button>
                     </div>
 
-                    {/* Pre-Trade Checklist Data */}
-                    {checklistData && (
-                      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-sm font-semibold text-blue-900">
-                            Pre-Trade Checklist Completed
-                          </h4>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            checklistData.setupQuality === 'excellent' ? 'bg-green-100 text-green-800' :
-                            checklistData.setupQuality === 'good' ? 'bg-blue-100 text-blue-800' :
-                            checklistData.setupQuality === 'fair' ? 'bg-yellow-100 text-yellow-800' :
-                            checklistData.setupQuality === 'poor' ? 'bg-orange-100 text-orange-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {checklistData.setupQuality} quality
-                          </span>
+                    {/* Step Content */}
+                    {currentStep === 0 && !isEditMode ? (
+                      /* Pre-Trade Checklist Step */
+                      <div className="px-6 py-8">
+                        <div className="text-center mb-8">
+                          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 mb-4">
+                            <ClipboardDocumentCheckIcon className="h-8 w-8 text-white" />
+                          </div>
+                          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                            Pre-Trade Checklist
+                          </h3>
+                          <p className="text-gray-600 max-w-md mx-auto">
+                            Complete your pre-trade analysis to ensure optimal trade setup and risk management
+                          </p>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                          <div>
-                            <span className="text-blue-700 font-medium">Checklist:</span>
-                            <p className="text-blue-900">{checklistData.checklistName}</p>
+
+                        {availableChecklists.length === 0 ? (
+                          <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                            <ClipboardDocumentCheckIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                            <h4 className="text-lg font-medium text-gray-900 mb-2">No Checklists Available</h4>
+                            <p className="text-gray-600 mb-6">Create your first trading checklist to get started</p>
+                            <button
+                              onClick={handleClose}
+                              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                            >
+                              Close & Create Checklist
+                            </button>
                           </div>
-                          <div>
-                            <span className="text-blue-700 font-medium">Completion:</span>
-                            <p className="text-blue-900">{checklistData.completionPercentage}%</p>
-                          </div>
-                          <div>
-                            <span className="text-blue-700 font-medium">Quality Score:</span>
-                            <p className="text-blue-900">{checklistData.qualityScore || 'N/A'}/10</p>
-                          </div>
-                          <div>
-                            <span className="text-blue-700 font-medium">Items:</span>
-                            <p className="text-blue-900">{checklistData.items?.length || 0} completed</p>
-                          </div>
-                        </div>
-                        {checklistData.overallNotes && (
-                          <div className="mt-3">
-                            <span className="text-blue-700 font-medium text-sm">Notes:</span>
-                            <p className="text-blue-900 text-sm mt-1">{checklistData.overallNotes}</p>
+                        ) : (
+                          <div className="space-y-4 max-h-80 overflow-y-auto">
+                            {availableChecklists.map((checklist) => (
+                              <div
+                                key={checklist._id}
+                                className="group relative bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-blue-300 hover:shadow-lg transition-all duration-200 cursor-pointer"
+                                onClick={() => handleChecklistSelect(checklist)}
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <h4 className="text-lg font-semibold text-gray-900 group-hover:text-blue-700">
+                                        {checklist.name}
+                                      </h4>
+                                      {checklist.isDefault && (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                          <StarIcon className="w-3 h-3 mr-1" />
+                                          Default
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-gray-600 mb-4 leading-relaxed">{checklist.description}</p>
+                                    <div className="flex items-center gap-4">
+                                      <div className="flex items-center gap-1.5">
+                                        <DocumentTextIcon className="w-4 h-4 text-blue-500" />
+                                        <span className="text-sm font-medium text-gray-700">
+                                          {checklist.totalSteps} steps
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        <ClockIcon className="w-4 h-4 text-green-500" />
+                                        <span className="text-sm text-gray-600">
+                                          ~{Math.ceil(checklist.totalSteps * 1.5)} min
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex-shrink-0 ml-4">
+                                    <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                                      <ChevronRightIcon className="w-6 h-6 text-blue-600" />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         )}
+
+                        <div className="mt-8 flex items-center justify-between pt-6 border-t border-gray-200">
+                          <button
+                            onClick={handleSkipChecklist}
+                            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 font-medium"
+                          >
+                            <XMarkIcon className="w-4 h-4 mr-1" />
+                            Skip checklist & continue
+                          </button>
+                          <button
+                            onClick={handleClose}
+                            className="btn-secondary"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </div>
-                    )}
+                    ) : (
+                      /* Trade Details Step */
+                      <div>
+                        {/* Pre-Trade Checklist Data Display */}
+                        {checklistResult && (
+                          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="text-sm font-semibold text-blue-900">
+                                Pre-Trade Checklist Completed
+                              </h4>
+                              <div className="flex items-center gap-2">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  checklistResult.setupQuality === 'excellent' ? 'bg-green-100 text-green-800' :
+                                  checklistResult.setupQuality === 'good' ? 'bg-blue-100 text-blue-800' :
+                                  checklistResult.setupQuality === 'fair' ? 'bg-yellow-100 text-yellow-800' :
+                                  checklistResult.setupQuality === 'poor' ? 'bg-orange-100 text-orange-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {checklistResult.setupQuality} quality
+                                </span>
+                                <button
+                                  onClick={goBackToChecklist}
+                                  className="text-blue-600 hover:text-blue-800 text-xs underline"
+                                >
+                                  Change
+                                </button>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                              <div>
+                                <span className="text-blue-700 font-medium">Checklist:</span>
+                                <p className="text-blue-900">{checklistResult.checklistName}</p>
+                              </div>
+                              <div>
+                                <span className="text-blue-700 font-medium">Completion:</span>
+                                <p className="text-blue-900">{checklistResult.completionPercentage}%</p>
+                              </div>
+                              <div>
+                                <span className="text-blue-700 font-medium">Quality Score:</span>
+                                <p className="text-blue-900">{checklistResult.qualityScore || 'N/A'}/10</p>
+                              </div>
+                              <div>
+                                <span className="text-blue-700 font-medium">Items:</span>
+                                <p className="text-blue-900">{checklistResult.items?.length || 0} completed</p>
+                              </div>
+                            </div>
+                            {checklistResult.overallNotes && (
+                              <div className="mt-3">
+                                <span className="text-blue-700 font-medium text-sm">Notes:</span>
+                                <p className="text-blue-900 text-sm mt-1">{checklistResult.overallNotes}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                     {/* Form Content */}
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -920,12 +1118,31 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
                         </button>
                       </div>
                     </form>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Dialog.Panel>
             </Transition.Child>
           </div>
         </div>
+
+        {/* Checklist Executor Modal */}
+        {showChecklistExecutor && selectedChecklist && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-60">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <TradeChecklistExecutor
+                userId={userId}
+                tradeId={null} // No trade ID yet - will be created after checklist
+                checklistId={selectedChecklist._id}
+                initialChecklist={selectedChecklist}
+                onComplete={handleChecklistComplete}
+                onClose={handleChecklistClose}
+                isPreTrade={true}
+              />
+            </div>
+          </div>
+        )}
       </Dialog>
     </Transition>
   );

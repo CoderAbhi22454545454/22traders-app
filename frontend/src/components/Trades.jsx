@@ -45,6 +45,7 @@ const Trades = ({ userId }) => {
     strategy: 'all',
     direction: 'all',
     tradeType: 'all', // 'all', 'real', 'backtest'
+    preTradeChecklist: 'all', // 'all', 'completed', 'skipped', 'excellent', 'good', 'fair', 'poor', 'terrible'
     sortBy: 'date',
     sortOrder: 'desc'
   });
@@ -200,6 +201,21 @@ const Trades = ({ userId }) => {
         filtered = filtered.filter(trade => !trade.isBacktest);
       } else if (filters.tradeType === 'backtest') {
         filtered = filtered.filter(trade => trade.isBacktest);
+      }
+    }
+
+    // Pre-trade checklist filter
+    if (filters.preTradeChecklist !== 'all') {
+      if (filters.preTradeChecklist === 'completed') {
+        filtered = filtered.filter(trade => trade.preTradeChecklist && trade.preTradeChecklist.checklistId);
+      } else if (filters.preTradeChecklist === 'skipped') {
+        filtered = filtered.filter(trade => !trade.preTradeChecklist || !trade.preTradeChecklist.checklistId);
+      } else {
+        // Filter by setup quality
+        filtered = filtered.filter(trade => 
+          trade.preTradeChecklist && 
+          trade.preTradeChecklist.setupQuality === filters.preTradeChecklist
+        );
       }
     }
 
@@ -1383,6 +1399,32 @@ const Trades = ({ userId }) => {
                     <option value="all">All Trades</option>
                     <option value="real">Real Trades</option>
                     <option value="backtest">Backtest Trades</option>
+                  </select>
+                </div>
+
+                {/* Pre-Trade Checklist Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <span className="flex items-center gap-2">
+                      <ClipboardDocumentCheckIcon className="w-4 h-4 text-blue-500" />
+                      Pre-Trade Analysis
+                    </span>
+                  </label>
+                  <select
+                    value={filters.preTradeChecklist}
+                    onChange={(e) => setFilters({...filters, preTradeChecklist: e.target.value})}
+                    className="form-input w-full"
+                  >
+                    <option value="all">All Trades</option>
+                    <option value="completed">With Checklist</option>
+                    <option value="skipped">Without Checklist</option>
+                    <optgroup label="By Quality">
+                      <option value="excellent">Excellent Setup</option>
+                      <option value="good">Good Setup</option>
+                      <option value="fair">Fair Setup</option>
+                      <option value="poor">Poor Setup</option>
+                      <option value="terrible">Terrible Setup</option>
+                    </optgroup>
                   </select>
                 </div>
 

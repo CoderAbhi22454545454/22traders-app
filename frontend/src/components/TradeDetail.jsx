@@ -766,6 +766,158 @@ const TradeDetail = ({ userId }) => {
             </div>
           </div>
 
+          {/* Pre-Trade Checklist Section */}
+          {trade.preTradeChecklist && (
+            <div className="mt-8">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                      <ClipboardDocumentCheckIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900">Pre-Trade Analysis</h3>
+                      <p className="text-sm text-gray-600">Setup quality assessment and checklist results</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold shadow-sm ${
+                      trade.preTradeChecklist.setupQuality === 'excellent' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                      trade.preTradeChecklist.setupQuality === 'good' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                      trade.preTradeChecklist.setupQuality === 'fair' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                      trade.preTradeChecklist.setupQuality === 'poor' ? 'bg-orange-100 text-orange-800 border border-orange-200' :
+                      'bg-red-100 text-red-800 border border-red-200'
+                    }`}>
+                      <div className={`w-2 h-2 rounded-full mr-2 ${
+                        trade.preTradeChecklist.setupQuality === 'excellent' ? 'bg-emerald-500' :
+                        trade.preTradeChecklist.setupQuality === 'good' ? 'bg-blue-500' :
+                        trade.preTradeChecklist.setupQuality === 'fair' ? 'bg-amber-500' :
+                        trade.preTradeChecklist.setupQuality === 'poor' ? 'bg-orange-500' :
+                        'bg-red-500'
+                      }`}></div>
+                      {trade.preTradeChecklist.setupQuality} quality
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <DocumentTextIcon className="w-4 h-4 text-blue-500" />
+                      <h4 className="text-sm font-medium text-gray-700">Checklist Used</h4>
+                    </div>
+                    <p className="text-lg font-semibold text-gray-900">{trade.preTradeChecklist.checklistName}</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ChartBarIcon className="w-4 h-4 text-green-500" />
+                      <h4 className="text-sm font-medium text-gray-700">Completion Rate</h4>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-lg font-semibold text-gray-900">{trade.preTradeChecklist.completionPercentage}%</p>
+                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${trade.preTradeChecklist.completionPercentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <StarIcon className="w-4 h-4 text-amber-500" />
+                      <h4 className="text-sm font-medium text-gray-700">Quality Score</h4>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-lg font-semibold text-gray-900">{trade.preTradeChecklist.qualityScore || 'N/A'}</p>
+                      <span className="text-sm text-gray-500">/10</span>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ClockIcon className="w-4 h-4 text-purple-500" />
+                      <h4 className="text-sm font-medium text-gray-700">Completed</h4>
+                    </div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {trade.preTradeChecklist.completedAt 
+                        ? new Date(trade.preTradeChecklist.completedAt).toLocaleDateString()
+                        : 'N/A'
+                      }
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {trade.preTradeChecklist.completedAt 
+                        ? new Date(trade.preTradeChecklist.completedAt).toLocaleTimeString()
+                        : ''
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                {/* Checklist Items */}
+                {trade.preTradeChecklist.items && trade.preTradeChecklist.items.length > 0 && (
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <CheckCircleIcon className="w-5 h-5 text-blue-600" />
+                      <h4 className="text-lg font-semibold text-gray-900">Checklist Items</h4>
+                      <span className="text-sm text-gray-500">
+                        ({trade.preTradeChecklist.items.filter(item => item.isCompleted).length}/{trade.preTradeChecklist.items.length} completed)
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {trade.preTradeChecklist.items.map((item, index) => (
+                        <div key={index} className={`relative p-4 rounded-lg border-2 transition-all ${
+                          item.isCompleted 
+                            ? 'bg-green-50 border-green-200 shadow-sm' 
+                            : 'bg-gray-50 border-gray-200'
+                        }`}>
+                          <div className="flex items-start space-x-3">
+                            <div className="flex-shrink-0 mt-0.5">
+                              {item.isCompleted ? (
+                                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
+                                  <CheckIcon className="w-4 h-4 text-white" />
+                                </div>
+                              ) : (
+                                <div className="w-6 h-6 bg-gray-300 rounded-full border-2 border-gray-400"></div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-900 mb-1">{item.title}</p>
+                              {item.value && (
+                                <div className="mb-2">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                                    {typeof item.value === 'object' ? JSON.stringify(item.value) : item.value}
+                                  </span>
+                                </div>
+                              )}
+                              {item.notes && (
+                                <p className="text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                                  {item.notes}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Overall Notes */}
+                {trade.preTradeChecklist.overallNotes && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <DocumentTextIcon className="w-5 h-5 text-gray-600" />
+                      <h4 className="text-lg font-semibold text-gray-900">Analysis Notes</h4>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{trade.preTradeChecklist.overallNotes}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Checklist Results Section */}
           <div className="mt-8">
             <ChecklistResults 
