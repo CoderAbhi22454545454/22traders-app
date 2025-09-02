@@ -361,8 +361,11 @@ const ChecklistModal = ({ checklist, onSave, onClose }) => {
     description: '',
     isRequired: false,
     category: 'custom',
-    inputType: 'checkbox',
-    options: []
+    inputType: 'radio',
+    options: [
+      { label: 'Yes', value: 'Yes' },
+      { label: 'No', value: 'No' }
+    ]
   });
   const [showNewItemForm, setShowNewItemForm] = useState(false);
 
@@ -381,8 +384,11 @@ const ChecklistModal = ({ checklist, onSave, onClose }) => {
         description: '',
         isRequired: false,
         category: 'custom',
-        inputType: 'checkbox',
-        options: []
+        inputType: 'radio',
+        options: [
+          { label: 'Yes', value: 'Yes' },
+          { label: 'No', value: 'No' }
+        ]
       });
       setShowNewItemForm(false);
     }
@@ -618,19 +624,11 @@ const ChecklistModal = ({ checklist, onSave, onClose }) => {
                   </label>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Input Type
+                      Response Type
                     </label>
-                    <select
-                      value={newItem.inputType}
-                      onChange={(e) => setNewItem(prev => ({ ...prev, inputType: e.target.value }))}
-                      className="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="checkbox">Checkbox</option>
-                      <option value="text">Text</option>
-                      <option value="number">Number</option>
-                      <option value="select">Select</option>
-                      <option value="radio">Radio</option>
-                    </select>
+                    <div className="px-3 py-1 border border-gray-300 rounded-lg bg-gray-50 text-gray-600">
+                      Yes/No Radio Buttons
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

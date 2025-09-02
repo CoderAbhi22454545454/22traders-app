@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { XMarkIcon, PhotoIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PhotoIcon, ClipboardDocumentCheckIcon, DocumentTextIcon, ChartBarIcon, StarIcon, ClockIcon, CheckCircleIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { tradesAPI, formatCurrency, formatDateTime, checklistAPI } from '../utils/api';
 import TradeScreenshot from './TradeScreenshot';
 import { useNotifications } from './Notifications';

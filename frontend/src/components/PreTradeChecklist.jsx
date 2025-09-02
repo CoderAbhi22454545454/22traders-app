@@ -502,41 +502,27 @@ const TradeChecklistExecutor = ({
       </div>
 
       {/* Progress Bar */}
-      <div className="px-6 py-4 bg-gray-50">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">
-            Step {currentStep + 1} of {checklist.items.length}
-          </span>
-          <span className="text-sm text-gray-500">
-            {completionPercentage}% Complete
-          </span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div
-            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${completionPercentage}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Step Navigation */}
-      <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center gap-2 overflow-x-auto">
-          {checklist.items.map((item, index) => (
-            <button
-              key={item._id}
-              onClick={() => goToStep(index)}
-              className={`flex-shrink-0 px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                index === currentStep
-                  ? 'bg-blue-600 text-white'
-                  : responses[item._id]?.isCompleted
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {index + 1}
-            </button>
-          ))}
+      <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center space-x-3">
+            <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+              Question {currentStep + 1}
+            </div>
+            <span className="text-blue-800 font-medium">
+              of {checklist.items.length}
+            </span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-blue-700 font-medium">
+              {completionPercentage}% Complete
+            </span>
+            <div className="w-16 bg-blue-200 rounded-full h-2">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${completionPercentage}%` }}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -561,10 +547,6 @@ const TradeChecklistExecutor = ({
               <span className="flex items-center gap-1">
                 <ChartBarIcon className="w-4 h-4" />
                 {currentItem.category.replace('-', ' ')}
-              </span>
-              <span className="flex items-center gap-1">
-                <DocumentTextIcon className="w-4 h-4" />
-                {currentItem.inputType}
               </span>
             </div>
           </div>
@@ -660,21 +642,6 @@ const TradeChecklistExecutor = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Add any overall notes about this trade setup..."
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Setup Quality Score (1-10)
-              </label>
-              <select
-                value={qualityScore || ''}
-                onChange={(e) => setQualityScore(e.target.value ? parseInt(e.target.value) : null)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Select a score</option>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(score => (
-                  <option key={score} value={score}>{score}</option>
-                ))}
-              </select>
             </div>
           </div>
 
@@ -781,39 +748,64 @@ const ChecklistItemInput = ({ item, response, onChange }) => {
       case 'select':
       case 'radio':
         return (
-          <div className="space-y-3">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={response.isCompleted}
-                onChange={(e) => handleInputChange('isCompleted', e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="ml-3 text-gray-700">Completed</span>
-            </label>
-            {item.options && item.options.length > 0 && (
-              <div className="space-y-2">
-                {item.options.map((option, index) => (
-                  <label key={index} className="flex items-center">
-                    <input
-                      type={item.inputType === 'radio' ? 'radio' : 'checkbox'}
-                      name={`option-${item._id}`}
-                      value={option.value}
-                      checked={response.value === option.value}
-                      onChange={(e) => handleInputChange('value', e.target.value)}
-                      className="border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="ml-3 text-gray-700">{option.label}</span>
-                  </label>
-                ))}
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Select your answer:</h4>
+              <div className="space-y-3">
+                <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  response.value === 'Yes' 
+                    ? 'border-green-500 bg-green-50 shadow-sm ring-1 ring-green-200' 
+                    : 'border-gray-200 hover:bg-green-50 hover:border-green-300'
+                }`}>
+                  <input
+                    type="radio"
+                    name={`option-${item._id}`}
+                    value="Yes"
+                    checked={response.value === 'Yes'}
+                    onChange={(e) => {
+                      handleInputChange('value', e.target.value);
+                      handleInputChange('isCompleted', true);
+                    }}
+                    className="border-gray-300 text-green-600 focus:ring-green-500 w-4 h-4"
+                  />
+                  <span className={`ml-3 font-medium transition-colors ${
+                    response.value === 'Yes' ? 'text-green-700' : 'text-gray-900'
+                  }`}>Yes</span>
+                  {response.value === 'Yes' && (
+                    <CheckIcon className="w-4 h-4 text-green-600 ml-auto" />
+                  )}
+                </label>
+                <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  response.value === 'No' 
+                    ? 'border-red-500 bg-red-50 shadow-sm ring-1 ring-red-200' 
+                    : 'border-gray-200 hover:bg-red-50 hover:border-red-300'
+                }`}>
+                  <input
+                    type="radio"
+                    name={`option-${item._id}`}
+                    value="No"
+                    checked={response.value === 'No'}
+                    onChange={(e) => {
+                      handleInputChange('value', e.target.value);
+                      handleInputChange('isCompleted', true);
+                    }}
+                    className="border-gray-300 text-red-600 focus:ring-red-500 w-4 h-4"
+                  />
+                  <span className={`ml-3 font-medium transition-colors ${
+                    response.value === 'No' ? 'text-red-700' : 'text-gray-900'
+                  }`}>No</span>
+                  {response.value === 'No' && (
+                    <XMarkIcon className="w-4 h-4 text-red-600 ml-auto" />
+                  )}
+                </label>
               </div>
-            )}
+            </div>
             <textarea
               value={response.notes || ''}
               onChange={(e) => handleInputChange('notes', e.target.value)}
               rows={2}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Add notes..."
+              placeholder="Add notes (optional)..."
             />
           </div>
         );

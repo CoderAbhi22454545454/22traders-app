@@ -22,7 +22,8 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   Squares2X2Icon,
-  BookOpenIcon
+  BookOpenIcon,
+  ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline';
 
 const Trades = ({ userId }) => {

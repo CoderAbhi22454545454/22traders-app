@@ -876,7 +876,7 @@ const Dashboard = ({ userId }) => {
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Stats Grid */}
         {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             <StatCard
               title="Total Trades"
               value={stats.overview.totalTrades}
@@ -887,18 +887,19 @@ const Dashboard = ({ userId }) => {
               value={`${stats.overview.winRate}%`}
               color={stats.overview.winRate >= 50 ? 'success' : 'danger'}
               icon={stats.overview.winRate >= 50 ? ArrowTrendingUpIcon : ArrowTrendingDownIcon}
+              style={{ gridArea: '1 / 2', borderBottom: '1px solid #ccc' }}
             />
-            <StatCard
+            {/* <StatCard
               title="Total P&L"
               value={formatCurrency(stats.overview.totalPnL)}
               color={stats.overview.totalPnL >= 0 ? 'success' : 'danger'}
               icon={CurrencyDollarIcon}
-            />
-            <StatCard
+            /> */}
+            {/* <StatCard
               title="Best Instrument"
               value={stats.overview.bestInstrument || 'N/A'}
               isInstrument={true}
-            />
+            /> */}
             <StatCard
               title="Win Streak"
               value={stats.overview.maxWinStreak || 0}
