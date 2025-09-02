@@ -4,6 +4,10 @@ import Dashboard from './components/Dashboard';
 import Analytics from './components/Analytics';
 import Trades from './components/Trades';
 import TradeDetail from './components/TradeDetail';
+import Backtests from './components/Backtests';
+import NewBacktest from './components/NewBacktest';
+import BacktestDetail from './components/BacktestDetail';
+import BacktestPatterns from './components/BacktestPatterns';
 import Journal from './components/Journal';
 import JournalEntry from './components/JournalEntry';
 import Login from './components/Login';
@@ -23,7 +27,8 @@ import {
   UserCircleIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  BeakerIcon
 } from '@heroicons/react/24/outline';
 import './index.css';
 
@@ -34,9 +39,10 @@ const Navigation = ({ user, onLogout }) => {
   
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+    { name: 'Journal', href: '/journal', icon: BookOpenIcon },
     { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
     { name: 'Trades', href: '/trades', icon: DocumentTextIcon },
-    { name: 'Journal', href: '/journal', icon: BookOpenIcon },
+    { name: 'Backtests', href: '/backtests', icon: BeakerIcon },
     { name: 'Checklists', href: '/checklists', icon: ClipboardDocumentCheckIcon },
   ];
 
@@ -280,6 +286,22 @@ function App() {
               <Route 
                 path="/pre-trade-checklist" 
                 element={<PreTradeChecklist userId={user.id} />} 
+              />
+              <Route 
+                path="/backtests" 
+                element={<Backtests userId={user.id} />} 
+              />
+              <Route 
+                path="/backtests/new" 
+                element={<NewBacktest userId={user.id} />} 
+              />
+              <Route 
+                path="/backtests/:id" 
+                element={<BacktestDetail userId={user.id} />} 
+              />
+              <Route 
+                path="/backtests/patterns" 
+                element={<BacktestPatterns userId={user.id} />} 
               />
               {/* Catch all route */}
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

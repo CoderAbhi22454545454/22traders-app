@@ -787,13 +787,13 @@ const Dashboard = ({ userId }) => {
                 Refresh
               </button>
               
-              <Link
+              {/* <Link
                 to="/pre-trade-checklist"
                 className="btn-primary py-1.5"
               >
                 <PlusIcon className="h-4 w-4 mr-1" />
                 New Trade
-              </Link>
+              </Link> */}
             </div>
           </div>
           

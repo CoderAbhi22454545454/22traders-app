@@ -533,9 +533,7 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
                           <h3 className="text-xl font-semibold text-gray-900 mb-2">
                             Pre-Trade Checklist
                           </h3>
-                          <p className="text-gray-600 max-w-md mx-auto">
-                            Complete your pre-trade analysis to ensure optimal trade setup and risk management
-                          </p>
+                        
                         </div>
 
                         {availableChecklists.length === 0 ? (
