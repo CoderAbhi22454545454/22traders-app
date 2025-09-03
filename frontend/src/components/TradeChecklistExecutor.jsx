@@ -371,6 +371,24 @@ const TradeChecklistExecutor = ({
                 placeholder="Add any overall notes about this trade setup..."
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Quality Score (1-10) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={qualityScore || ''}
+                onChange={(e) => setQualityScore(e.target.value ? parseInt(e.target.value) : null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Rate the overall quality of this trade setup (1-10)"
+                required
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                Rate the overall quality of your trade setup from 1 (poor) to 10 (excellent)
+              </p>
+            </div>
           </div>
 
           {/* Actions */}
@@ -383,7 +401,8 @@ const TradeChecklistExecutor = ({
             </button>
             <button
               onClick={handleComplete}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              disabled={!qualityScore || qualityScore < 1 || qualityScore > 10}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Complete Checklist
             </button>
