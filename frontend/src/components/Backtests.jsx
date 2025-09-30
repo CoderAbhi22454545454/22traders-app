@@ -7,10 +7,16 @@ import {
   PhotoIcon,
   TagIcon,
   CalendarIcon,
-  TrendingUpIcon,
-  TrendingDownIcon
+  TrendingDownIcon,
+  Squares2X2Icon,
+  ListBulletIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
+  StarIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import { Navigate } from 'react-router-dom';
+import InstrumentIcon from './shared/InstrumentIcon';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
@@ -20,7 +26,7 @@ const Backtests = ({ userId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
-    timeRange: '1m',
+    timeRange: '',
     pattern: '',
     marketCondition: '',
     chipName: '',
@@ -39,6 +45,7 @@ const Backtests = ({ userId }) => {
     totalPages: 1,
     totalBacktests: 0
   });
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'list'
 
   // Fetch backtests
   const fetchBacktests = async (page = 1) => {
@@ -96,7 +103,7 @@ const Backtests = ({ userId }) => {
 
   const clearFilters = () => {
     setFilters({
-      timeRange: '1m',
+      timeRange: '',
       pattern: '',
       marketCondition: '',
       chipName: '',
@@ -238,8 +245,36 @@ const Backtests = ({ userId }) => {
           {/* Backtests List */}
           <div className="bg-white shadow overflow-hidden rounded-lg">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Recent Backtests</h3>
-              <p className="mt-1 text-sm text-gray-600">Your latest backtest analyses</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Recent Backtests</h3>
+                  <p className="mt-1 text-sm text-gray-600">Your latest backtest analyses</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setViewMode('cards')}
+                    className={`p-2 rounded-md transition-colors ${
+                      viewMode === 'cards'
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                    title="Card View"
+                  >
+                    <Squares2X2Icon className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 rounded-md transition-colors ${
+                      viewMode === 'list'
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                    title="List View"
+                  >
+                    <ListBulletIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
             </div>
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
@@ -263,110 +298,120 @@ const Backtests = ({ userId }) => {
                 </div>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                {/* Table Header */}
-                <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <div className="col-span-1">Status</div>
-                  <div className="col-span-2">Trade Pair</div>
-                  <div className="col-span-1">Direction</div>
-                  <div className="col-span-1">Result</div>
-                  <div className="col-span-2">Pattern</div>
-                  <div className="col-span-2">Market</div>
-                  <div className="col-span-1">Confidence</div>
-                  <div className="col-span-1">Screenshots</div>
-                  <div className="col-span-1">Date</div>
-                </div>
-                
-                {/* Table Body */}
-                <div>
-                  {backtests.map((backtest) => (
-                    <Link key={backtest._id} to={`/backtests/${backtest._id}`}>
-                      <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150 items-center">
-                        {/* Status Indicator */}
-                        <div className="col-span-1">
-                          <div className={`w-3 h-3 rounded-full ${
-                            backtest.result === 'win' ? 'bg-green-400' :
-                            backtest.result === 'loss' ? 'bg-red-400' : 'bg-yellow-400'
-                          }`}></div>
-                        </div>
-                        
-                        {/* Trade Pair */}
-                        <div className="col-span-2">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {backtest.tradePair}
-                          </p>
-                        </div>
-                        
-                        {/* Direction */}
-                        <div className="col-span-1">
-                          <span className="text-sm text-gray-600 capitalize">
-                            {backtest.direction}
-                          </span>
-                        </div>
-                        
-                        {/* Result */}
-                        <div className="col-span-1">
-                          <span className={`px-2 py-1 inline-flex text-xs font-medium rounded-full ${
-                            backtest.result === 'win' ? 'bg-green-100 text-green-800' :
-                            backtest.result === 'loss' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {backtest.result?.toUpperCase()}
-                          </span>
-                        </div>
-                        
-                        {/* Pattern */}
-                        <div className="col-span-2">
-                          <span className="text-sm text-gray-600">
-                            {backtest.patternIdentified || 'N/A'}
-                          </span>
-                        </div>
-                        
-                        {/* Market Condition */}
-                        <div className="col-span-2">
-                          <span className="text-sm text-gray-600 capitalize">
-                            {backtest.marketCondition || 'N/A'}
-                          </span>
-                        </div>
-                        
-                        {/* Confidence */}
-                        <div className="col-span-1">
-                          <span className="text-sm text-gray-600">
-                            {backtest.confidence ? `${backtest.confidence}/10` : 'N/A'}
-                          </span>
-                        </div>
-                        
-                        {/* Screenshots */}
-                        <div className="col-span-1">
-                          <div className="flex items-center text-sm text-gray-600">
-                            <PhotoIcon className="h-4 w-4 mr-1" />
-                            <span>{backtest.screenshots.length}</span>
-                          </div>
-                        </div>
-                        
-                        {/* Date */}
-                        <div className="col-span-1">
-                          <span className="text-sm text-gray-600">
-                            {new Date(backtest.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* Custom Chips Row */}
-                      {backtest.customChips && backtest.customChips.length > 0 && (
-                        <div className="px-6 pb-3 -mt-1">
-                          <div className="flex flex-wrap gap-2">
-                            {backtest.customChips.slice(0, 5).map(formatChip)}
-                            {backtest.customChips.length > 5 && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                                +{backtest.customChips.length - 5} more
+              <div>
+                {viewMode === 'cards' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+                    {backtests.map((backtest) => (
+                      <BacktestCard key={backtest._id} backtest={backtest} formatChip={formatChip} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    {/* Table Header */}
+                    <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <div className="col-span-1">Status</div>
+                      <div className="col-span-2">Trade Pair</div>
+                      <div className="col-span-1">Direction</div>
+                      <div className="col-span-1">Result</div>
+                      <div className="col-span-2">Pattern</div>
+                      <div className="col-span-2">Market</div>
+                      <div className="col-span-1">Confidence</div>
+                      <div className="col-span-1">Screenshots</div>
+                      <div className="col-span-1">Date</div>
+                    </div>
+                    
+                    {/* Table Body */}
+                    <div>
+                      {backtests.map((backtest) => (
+                        <Link key={backtest._id} to={`/backtests/${backtest._id}`}>
+                          <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150 items-center">
+                            {/* Status Indicator */}
+                            <div className="col-span-1">
+                              <div className={`w-3 h-3 rounded-full ${
+                                backtest.result === 'win' ? 'bg-green-400' :
+                                backtest.result === 'loss' ? 'bg-red-400' : 'bg-yellow-400'
+                              }`}></div>
+                            </div>
+                            
+                            {/* Trade Pair */}
+                            <div className="col-span-2">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {backtest.tradePair || backtest.instrument}
+                              </p>
+                            </div>
+                            
+                            {/* Direction */}
+                            <div className="col-span-1">
+                              <span className="text-sm text-gray-600 capitalize">
+                                {backtest.direction}
                               </span>
-                            )}
+                            </div>
+                            
+                            {/* Result */}
+                            <div className="col-span-1">
+                              <span className={`px-2 py-1 inline-flex text-xs font-medium rounded-full ${
+                                backtest.result === 'win' ? 'bg-green-100 text-green-800' :
+                                backtest.result === 'loss' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {backtest.result?.toUpperCase()}
+                              </span>
+                            </div>
+                            
+                            {/* Pattern */}
+                            <div className="col-span-2">
+                              <span className="text-sm text-gray-600">
+                                {backtest.patternIdentified || 'N/A'}
+                              </span>
+                            </div>
+                            
+                            {/* Market Condition */}
+                            <div className="col-span-2">
+                              <span className="text-sm text-gray-600 capitalize">
+                                {backtest.marketCondition || 'N/A'}
+                              </span>
+                            </div>
+                            
+                            {/* Confidence */}
+                            <div className="col-span-1">
+                              <span className="text-sm text-gray-600">
+                                {backtest.confidence ? `${backtest.confidence}/10` : 'N/A'}
+                              </span>
+                            </div>
+                            
+                            {/* Screenshots */}
+                            <div className="col-span-1">
+                              <div className="flex items-center text-sm text-gray-600">
+                                <PhotoIcon className="h-4 w-4 mr-1" />
+                                <span>{backtest.screenshots?.length || 0}</span>
+                              </div>
+                            </div>
+                            
+                            {/* Date */}
+                            <div className="col-span-1">
+                              <span className="text-sm text-gray-600">
+                                {new Date(backtest.date || backtest.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </Link>
-                  ))}
-                </div>
+                          
+                          {/* Custom Chips Row */}
+                          {backtest.customChips && backtest.customChips.length > 0 && (
+                            <div className="px-6 pb-3 -mt-1">
+                              <div className="flex flex-wrap gap-2">
+                                {backtest.customChips.slice(0, 5).map(formatChip)}
+                                {backtest.customChips.length > 5 && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                    +{backtest.customChips.length - 5} more
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
           )}
 
@@ -423,6 +468,165 @@ const Backtests = ({ userId }) => {
         </div>
       </div>
     </div>
+  );
+};
+
+// Backtest Card Component
+const BacktestCard = ({ backtest, formatChip }) => {
+  const isProfitable = backtest.pnl >= 0;
+  const resultColor = backtest.result === 'win' ? 'text-green-600' : 
+                     backtest.result === 'loss' ? 'text-red-600' : 'text-yellow-600';
+  
+  const openImageLightbox = (imageUrl, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 p-4';
+    modal.onclick = () => modal.remove();
+    
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.className = 'max-w-[95vw] max-h-[95vh] object-contain';
+    img.style.imageRendering = 'high-quality';
+    img.onclick = (e) => e.stopPropagation();
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '✕';
+    closeBtn.className = 'absolute top-4 right-4 text-white text-3xl font-bold hover:text-gray-300 bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center';
+    closeBtn.onclick = () => modal.remove();
+    
+    modal.appendChild(img);
+    modal.appendChild(closeBtn);
+    document.body.appendChild(modal);
+  };
+  
+  return (
+    <Link to={`/backtests/${backtest._id}`}>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className={`p-2 rounded-full ${
+              isProfitable ? 'bg-green-100' : 'bg-red-100'
+            }`}>
+              {isProfitable ? (
+                <ArrowTrendingUpIcon className="h-5 w-5 text-green-600" />
+              ) : (
+                <ArrowTrendingDownIcon className="h-5 w-5 text-red-600" />
+              )}
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                <InstrumentIcon instrument={backtest.instrument || backtest.tradePair} />
+              </h3>
+              <p className="text-sm text-gray-500">
+                {new Date(backtest.date || backtest.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className={`text-xl font-bold ${
+              isProfitable ? 'text-green-600' : 'text-red-600'
+            }`}>
+              ${backtest.pnl?.toFixed(2) || '0.00'}
+            </div>
+            <div className={`text-sm font-medium ${resultColor}`}>
+              {backtest.result?.toUpperCase() || 'N/A'}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          {backtest.direction && (
+            <div className="flex items-center space-x-2">
+              <ArrowTrendingUpIcon className={`h-4 w-4 ${
+                backtest.direction === 'Long' ? 'text-blue-500' : 'text-purple-500'
+              }`} />
+              <span className="text-sm text-gray-600">
+                {backtest.direction}{backtest.lotSize ? ` • ${backtest.lotSize} lots` : ''}
+              </span>
+            </div>
+          )}
+          {backtest.patternIdentified && (
+            <div className="flex items-center space-x-2">
+              <ChartBarIcon className="h-4 w-4 text-gray-400" />
+              <span className="text-sm text-gray-600 truncate">
+                {backtest.patternIdentified}
+              </span>
+            </div>
+          )}
+          {backtest.marketCondition && (
+            <div className="flex items-center space-x-2">
+              <ClockIcon className="h-4 w-4 text-gray-400" />
+              <span className="text-sm text-gray-600 capitalize">
+                {backtest.marketCondition}
+              </span>
+            </div>
+          )}
+          {backtest.confidence && (
+            <div className="flex items-center space-x-2">
+              <StarIcon className="h-4 w-4 text-yellow-500" />
+              <span className="text-sm text-gray-600">
+                {backtest.confidence}/10
+              </span>
+            </div>
+          )}
+        </div>
+
+        {backtest.backtestNotes && (
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg line-clamp-2">
+              {backtest.backtestNotes}
+            </p>
+          </div>
+        )}
+
+        {backtest.screenshots && backtest.screenshots.length > 0 && (
+          <div className="mb-4">
+            <div className="grid grid-cols-3 gap-2">
+              {backtest.screenshots.slice(0, 3).map((screenshot, idx) => (
+                <img
+                  key={idx}
+                  src={screenshot.url}
+                  alt={screenshot.description || `Screenshot ${idx + 1}`}
+                  className="w-full h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                  style={{ imageRendering: 'high-quality' }}
+                  onClick={(e) => openImageLightbox(screenshot.url, e)}
+                />
+              ))}
+            </div>
+            {backtest.screenshots.length > 3 && (
+              <p className="text-xs text-gray-500 mt-2">
+                +{backtest.screenshots.length - 3} more screenshots
+              </p>
+            )}
+          </div>
+        )}
+
+        {backtest.customChips && backtest.customChips.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {backtest.customChips.slice(0, 3).map(formatChip)}
+            {backtest.customChips.length > 3 && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                +{backtest.customChips.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+          <div className="text-xs text-gray-500">
+            Trade #{backtest.tradeNumber || 'N/A'}
+          </div>
+          <div className="flex items-center space-x-2">
+            <PhotoIcon className="h-4 w-4 text-gray-400" />
+            <span className="text-xs text-gray-500">
+              {backtest.screenshots?.length || 0} screenshots
+            </span>
+          </div>
+        </div>
+      </div>
+    </Link>
   );
 };
 

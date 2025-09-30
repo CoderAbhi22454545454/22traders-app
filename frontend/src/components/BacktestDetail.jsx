@@ -120,9 +120,9 @@ const BacktestDetail = ({ userId }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-1 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
@@ -152,88 +152,143 @@ const BacktestDetail = ({ userId }) => {
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-md p-3">
             <p className="text-red-600">{error}</p>
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Trade Summary */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Trade Summary</h3>
-              
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        {/* Quick Stats Row */}
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-5">
+          <div className="bg-white shadow rounded-lg p-3">
+            <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">P&L</dt>
+            <dd className={`mt-1.5 text-lg font-bold ${
+              backtest.pnl >= 0 ? 'text-green-600' : 'text-red-600'
+            }`}>
+              ${backtest.pnl?.toFixed(2) || '0.00'}
+            </dd>
+          </div>
+
+          <div className="bg-white shadow rounded-lg p-3">
+            <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Result</dt>
+            <dd className="mt-1.5">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                backtest.result === 'win' 
+                  ? 'bg-green-100 text-green-800'
+                  : backtest.result === 'loss'
+                  ? 'bg-red-100 text-red-800'
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {backtest.result?.toUpperCase() || 'N/A'}
+              </span>
+            </dd>
+          </div>
+
+          {backtest.confidence && (
+            <div className="bg-white shadow rounded-lg p-3">
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Confidence</dt>
+              <dd className="mt-1.5 text-lg font-bold text-gray-900">
+                {backtest.confidence}/10
+              </dd>
+            </div>
+          )}
+
+          <div className="bg-white shadow rounded-lg p-3">
+            <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Screenshots</dt>
+            <dd className="mt-1.5 text-lg font-bold text-gray-900">
+              {backtest.screenshots?.length || 0}
+            </dd>
+          </div>
+
+          <div className="bg-white shadow rounded-lg p-3">
+            <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Labels</dt>
+            <dd className="mt-1.5 text-lg font-bold text-gray-900">
+              {backtest.customChips?.length || 0}
+            </dd>
+          </div>
+
+          <div className="bg-white shadow rounded-lg p-3">
+            <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Created</dt>
+            <dd className="mt-1.5 text-sm font-medium text-gray-900">
+              {new Date(backtest.createdAt).toLocaleDateString()}
+            </dd>
+          </div>
+        </div>
+
+        {/* Single Column Layout */}
+        <div className="space-y-4">
+          {/* Trade Summary */}
+          <div className="bg-white shadow rounded-lg p-5">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">Trade Summary</h3>
+            
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+              {backtest.direction && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Direction</dt>
                   <dd className={`mt-1 text-sm font-medium ${
                     backtest.direction === 'Long' ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {backtest.direction || 'N/A'}
+                    {backtest.direction}
                   </dd>
                 </div>
+              )}
 
+              {backtest.entryPrice && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Entry Price</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{backtest.entryPrice || 'N/A'}</dd>
+                  <dd className="mt-1 text-sm text-gray-900">{backtest.entryPrice}</dd>
                 </div>
+              )}
 
+              {backtest.exitPrice && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Exit Price</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{backtest.exitPrice || 'N/A'}</dd>
+                  <dd className="mt-1 text-sm text-gray-900">{backtest.exitPrice}</dd>
                 </div>
+              )}
 
+              {backtest.stopLoss && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Stop Loss</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{backtest.stopLoss || 'N/A'}</dd>
+                  <dd className="mt-1 text-sm text-gray-900">{backtest.stopLoss}</dd>
                 </div>
+              )}
 
+              {backtest.takeProfit && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Take Profit</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{backtest.takeProfit || 'N/A'}</dd>
+                  <dd className="mt-1 text-sm text-gray-900">{backtest.takeProfit}</dd>
                 </div>
+              )}
 
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">P&L</dt>
-                  <dd className={`mt-1 text-sm font-medium ${
-                    backtest.pnl >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    ${backtest.pnl?.toFixed(2) || '0.00'}
-                  </dd>
-                </div>
-
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Result</dt>
-                  <dd className="mt-1">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      backtest.result === 'win' 
-                        ? 'bg-green-100 text-green-800'
-                        : backtest.result === 'loss'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {backtest.result?.toUpperCase() || 'N/A'}
-                    </span>
-                  </dd>
-                </div>
-
+              {backtest.lotSize && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Lot Size</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{backtest.lotSize || 'N/A'}</dd>
+                  <dd className="mt-1 text-sm text-gray-900">{backtest.lotSize}</dd>
                 </div>
+              )}
 
+              {backtest.riskReward && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Risk:Reward</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{backtest.riskReward || 'N/A'}</dd>
+                  <dd className="mt-1 text-sm text-gray-900">{backtest.riskReward}</dd>
                 </div>
-              </div>
-            </div>
+              )}
 
+              {backtest.positionSize && (
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Position Size</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{backtest.positionSize}</dd>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Custom Labels and Screenshots Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Custom Chips */}
             {backtest.customChips && backtest.customChips.length > 0 && (
-              <div className="bg-white shadow rounded-lg p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Custom Labels</h3>
+              <div className="bg-white shadow rounded-lg p-5">
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Custom Labels</h3>
                 <div className="flex flex-wrap gap-3">
                   {backtest.customChips.map((chip, index) => formatChip(chip))}
                 </div>
@@ -242,16 +297,23 @@ const BacktestDetail = ({ userId }) => {
 
             {/* Screenshots */}
             {backtest.screenshots && backtest.screenshots.length > 0 && (
-              <div className="bg-white shadow rounded-lg p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Trade Screenshots</h3>
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="bg-white shadow rounded-lg p-5">
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Trade Screenshots</h3>
+                <div className={`grid gap-3 ${
+                  backtest.screenshots.length === 1 
+                    ? 'grid-cols-1' 
+                    : backtest.screenshots.length === 2 
+                    ? 'grid-cols-2' 
+                    : 'grid-cols-2 sm:grid-cols-3'
+                }`}>
                   {backtest.screenshots.map((screenshot) => (
-                    <div key={screenshot._id} className="space-y-3">
+                    <div key={screenshot._id} className="space-y-2">
                       <div className="relative">
                         <img
                           src={screenshot.url}
                           alt={`${screenshot.type} screenshot`}
-                          className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90"
+                          className="w-full h-40 object-cover rounded-lg cursor-pointer hover:opacity-90"
+                          style={{ imageRendering: 'high-quality' }}
                           onClick={() => setSelectedImage(screenshot)}
                         />
                         <div className="absolute top-2 left-2">
@@ -260,14 +322,19 @@ const BacktestDetail = ({ userId }) => {
                           </span>
                         </div>
                         <button
-                          onClick={() => deleteScreenshot(screenshot._id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Are you sure you want to delete this screenshot? This action cannot be undone.')) {
+                              deleteScreenshot(screenshot._id);
+                            }
+                          }}
                           className="absolute top-2 right-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-600 text-white hover:bg-red-700"
                         >
                           <XMarkIcon className="w-4 h-4" />
                         </button>
                       </div>
                       {screenshot.description && (
-                        <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                        <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded-md">
                           {screenshot.description}
                         </p>
                       )}
@@ -276,14 +343,15 @@ const BacktestDetail = ({ userId }) => {
                 </div>
               </div>
             )}
+          </div>
 
-            {/* Analysis */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Analysis & Insights</h3>
+          {/* Analysis */}
+          <div className="bg-white shadow rounded-lg p-5">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">Analysis & Insights</h3>
               
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {(backtest.patternIdentified || backtest.marketCondition || backtest.confidence) && (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {backtest.patternIdentified && (
                       <div>
                         <dt className="text-sm font-medium text-gray-500">Pattern</dt>
@@ -323,7 +391,7 @@ const BacktestDetail = ({ userId }) => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {backtest.whatWorked && (
                     <div>
                       <dt className="text-sm font-medium text-green-600">What Worked</dt>
@@ -360,124 +428,41 @@ const BacktestDetail = ({ userId }) => {
                     </dd>
                   </div>
                 )}
-              </div>
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Quick Stats */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Stats</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">P&L</span>
-                  <span className={`text-sm font-medium ${
-                    backtest.pnl >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    ${backtest.pnl?.toFixed(2) || '0.00'}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Result</span>
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    backtest.result === 'win' 
-                      ? 'bg-green-100 text-green-800'
-                      : backtest.result === 'loss'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {backtest.result?.toUpperCase() || 'N/A'}
-                  </span>
-                </div>
-
-                {backtest.confidence && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Confidence</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {backtest.confidence}/10
-                    </span>
-                  </div>
-                )}
-
-                {backtest.calculatedRiskReward && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Risk:Reward</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      1:{backtest.calculatedRiskReward}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Metadata */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Metadata</h3>
-              <div className="space-y-3">
-                <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Created</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {new Date(backtest.createdAt).toLocaleString()}
-                  </dd>
-                </div>
-                {backtest.updatedAt !== backtest.createdAt && (
-                  <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Updated</dt>
-                    <dd className="mt-1 text-sm text-gray-900">
-                      {new Date(backtest.updatedAt).toLocaleString()}
-                    </dd>
-                  </div>
-                )}
-                <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Screenshots</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {backtest.screenshots?.length || 0} uploaded
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Custom Labels</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {backtest.customChips?.length || 0} labels
-                  </dd>
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Image Modal */}
+        {/* Image Modal - High Quality Lightbox */}
         {selectedImage && (
-          <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-              <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setSelectedImage(null)}></div>
+          <div className="fixed inset-0 z-50 bg-black bg-opacity-95 flex items-center justify-center p-4" onClick={() => setSelectedImage(null)}>
+            <div className="relative max-w-[95vw] max-h-[95vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="absolute -top-12 right-0 text-white text-3xl font-bold hover:text-gray-300 bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center z-10"
+              >
+                ✕
+              </button>
               
-              <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900 capitalize">
-                    {selectedImage.type} Screenshot
-                  </h3>
-                  <button
-                    onClick={() => setSelectedImage(null)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <XMarkIcon className="h-6 w-6" />
-                  </button>
-                </div>
-                
-                <img
-                  src={selectedImage.url}
-                  alt={`${selectedImage.type} screenshot`}
-                  className="w-full max-h-96 object-contain rounded-lg"
-                />
-                
-                {selectedImage.description && (
-                  <div className="mt-4 p-3 bg-gray-50 rounded-md">
-                    <p className="text-sm text-gray-700">{selectedImage.description}</p>
-                  </div>
-                )}
+              {/* Image Type Badge */}
+              <div className="absolute -top-12 left-0 bg-black bg-opacity-75 text-white px-4 py-2 rounded-md text-sm font-medium capitalize">
+                {selectedImage.type} Screenshot
               </div>
+              
+              {/* High Quality Image */}
+              <img
+                src={selectedImage.url}
+                alt={`${selectedImage.type} screenshot`}
+                className="max-w-full max-h-[85vh] object-contain rounded-lg"
+                style={{ imageRendering: 'high-quality' }}
+              />
+              
+              {/* Description */}
+              {selectedImage.description && (
+                <div className="mt-4 max-w-2xl bg-black bg-opacity-75 text-white p-4 rounded-md">
+                  <p className="text-sm">{selectedImage.description}</p>
+                </div>
+              )}
             </div>
           </div>
         )}
