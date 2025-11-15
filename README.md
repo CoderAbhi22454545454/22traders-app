@@ -117,6 +117,11 @@ A comprehensive trading journal application built with React (frontend) and Node
 
 The application will be available at `http://localhost:3000`
 
+
+update command netlify 
+npm run build
+netlify deploy --prod --dir=build
+
 ## Project Structure
 
 ```
@@ -206,3 +211,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 **Happy Trading and Journaling! 📈📝** 
+
