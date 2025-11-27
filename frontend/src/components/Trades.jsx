@@ -23,7 +23,10 @@ import {
   ChevronRightIcon,
   Squares2X2Icon,
   BookOpenIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  MagnifyingGlassIcon,
+  CurrencyDollarIcon,
+  FireIcon
 } from '@heroicons/react/24/outline';
 
 const Trades = ({ userId }) => {
@@ -37,10 +40,15 @@ const Trades = ({ userId }) => {
   const [tradesPerPage] = useState(12);
   const [totalPages, setTotalPages] = useState(0);
   
+  // Search state
+  const [searchTerm, setSearchTerm] = useState('');
+  
   // Filter state
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     dateRange: 'all',
+    customDateFrom: '',
+    customDateTo: '',
     result: 'all',
     instrument: 'all',
     strategy: 'all',
@@ -55,6 +63,26 @@ const Trades = ({ userId }) => {
   const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'notebook'
   const [notebookPage, setNotebookPage] = useState(1); // Current page in notebook view
 
+  // Helper function to get trade result (handles both result and tradeOutcome fields)
+  const getTradeResult = (trade) => {
+    if (trade.result) {
+      return trade.result.toLowerCase();
+    }
+    if (trade.tradeOutcome) {
+      const outcome = trade.tradeOutcome.toLowerCase();
+      if (outcome === 'win') return 'win';
+      if (outcome === 'loss') return 'loss';
+      if (outcome === 'break even' || outcome === 'be') return 'be';
+    }
+    // If PnL is available, determine from that
+    if (trade.pnl !== undefined && trade.pnl !== null) {
+      if (trade.pnl > 0) return 'win';
+      if (trade.pnl < 0) return 'loss';
+      return 'be';
+    }
+    return null;
+  };
+
   // Fetch all trades once on component mount
   useEffect(() => {
     if (userId) {
@@ -68,7 +96,7 @@ const Trades = ({ userId }) => {
     if (allTrades.length > 0) {
       applyFilters();
     }
-  }, [filters, allTrades]);
+  }, [filters, allTrades, searchTerm]);
 
   // Update pagination when filtered trades change
   useEffect(() => {
@@ -165,8 +193,32 @@ const Trades = ({ userId }) => {
     
     let filtered = [...allTrades];
 
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(trade => {
+        return (
+          trade.tradeNumber?.toLowerCase().includes(term) ||
+          trade.instrument?.toLowerCase().includes(term) ||
+          trade.strategy?.toLowerCase().includes(term) ||
+          trade.notes?.toLowerCase().includes(term) ||
+          trade.reasonForTrade?.toLowerCase().includes(term) ||
+          trade.lessonLearned?.toLowerCase().includes(term) ||
+          trade.emotions?.toLowerCase().includes(term)
+        );
+      });
+    }
+
     // Date range filter
-    if (filters.dateRange !== 'all') {
+    if (filters.dateRange === 'custom' && filters.customDateFrom && filters.customDateTo) {
+      const startDate = new Date(filters.customDateFrom);
+      const endDate = new Date(filters.customDateTo);
+      endDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(trade => {
+        const tradeDate = new Date(trade.date);
+        return tradeDate >= startDate && tradeDate <= endDate;
+      });
+    } else if (filters.dateRange !== 'all') {
       const dateRange = getDateRange(filters.dateRange);
       if (dateRange) {
         filtered = filtered.filter(trade => {
@@ -178,7 +230,7 @@ const Trades = ({ userId }) => {
 
     // Result filter
     if (filters.result !== 'all') {
-      filtered = filtered.filter(trade => trade.result === filters.result);
+      filtered = filtered.filter(trade => getTradeResult(trade) === filters.result);
     }
 
     // Instrument filter
@@ -270,6 +322,9 @@ const Trades = ({ userId }) => {
     let startDate = new Date(today);
     
     switch (dateRange) {
+      case 'today':
+        startDate = new Date(today);
+        break;
       case '7d':
         startDate.setDate(today.getDate() - 7);
         break;
@@ -292,17 +347,70 @@ const Trades = ({ userId }) => {
     };
   };
 
+  // Calculate stats from filtered trades
+  const calculateStats = () => {
+    if (filteredTrades.length === 0) {
+      return {
+        totalTrades: 0,
+        totalPnL: 0,
+        winRate: 0,
+        avgPnL: 0,
+        wins: 0,
+        losses: 0,
+        bestTrade: null,
+        worstTrade: null,
+        totalLots: 0,
+        avgExecutionScore: 0
+      };
+    }
+
+    const wins = filteredTrades.filter(t => getTradeResult(t) === 'win').length;
+    const losses = filteredTrades.filter(t => getTradeResult(t) === 'loss').length;
+    const totalPnL = filteredTrades.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0);
+    const avgPnL = totalPnL / filteredTrades.length;
+    const winRate = filteredTrades.length > 0 ? Math.round((wins / filteredTrades.length) * 100) : 0;
+    
+    const bestTrade = [...filteredTrades].sort((a, b) => (parseFloat(b.pnl) || 0) - (parseFloat(a.pnl) || 0))[0];
+    const worstTrade = [...filteredTrades].sort((a, b) => (parseFloat(a.pnl) || 0) - (parseFloat(b.pnl) || 0))[0];
+    
+    const totalLots = filteredTrades.reduce((sum, t) => sum + (parseFloat(t.lotSize) || 0), 0);
+    
+    const tradesWithScore = filteredTrades.filter(t => t.executionScore);
+    const avgExecutionScore = tradesWithScore.length > 0
+      ? tradesWithScore.reduce((sum, t) => sum + (parseFloat(t.executionScore) || 0), 0) / tradesWithScore.length
+      : 0;
+
+    return {
+      totalTrades: filteredTrades.length,
+      totalPnL,
+      winRate,
+      avgPnL,
+      wins,
+      losses,
+      bestTrade,
+      worstTrade,
+      totalLots,
+      avgExecutionScore: Math.round(avgExecutionScore * 10) / 10
+    };
+  };
+
+  const stats = calculateStats();
+
   const resetFilters = () => {
     setFilters({
       dateRange: 'all',
+      customDateFrom: '',
+      customDateTo: '',
       result: 'all',
       instrument: 'all',
       strategy: 'all',
       direction: 'all',
       tradeType: 'all',
+      preTradeChecklist: 'all',
       sortBy: 'date',
       sortOrder: 'desc'
     });
+    setSearchTerm('');
     setShowFilters(false);
   };
 
@@ -415,47 +523,54 @@ const Trades = ({ userId }) => {
   };
 
   const TradeCard = ({ trade }) => {
+    const tradeResult = getTradeResult(trade);
     const isProfitable = trade.pnl >= 0;
-    const resultColor = trade.result === 'win' ? 'text-green-600' : 
-                       trade.result === 'loss' ? 'text-red-600' : 'text-yellow-600';
+    const resultColor = tradeResult === 'win' ? 'text-green-600' : 
+                       tradeResult === 'loss' ? 'text-red-600' : 'text-yellow-600';
+    const resultBg = tradeResult === 'win' ? 'bg-green-50 border-green-200' : 
+                     tradeResult === 'loss' ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200';
     
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+      <div className={`bg-white rounded-xl shadow-sm border-2 ${resultBg} p-6 hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <div className={`p-2 rounded-full ${isProfitable ? 'bg-green-100' : 'bg-red-100'}`}>
+            <div className={`p-3 rounded-xl ${isProfitable ? 'bg-gradient-to-br from-green-100 to-green-200' : 'bg-gradient-to-br from-red-100 to-red-200'} shadow-sm`}>
               {isProfitable ? (
-                <ArrowTrendingUpIcon className="h-5 w-5 text-green-600" />
+                <ArrowTrendingUpIcon className="h-6 w-6 text-green-700" />
               ) : (
-                <ArrowTrendingDownIcon className="h-5 w-5 text-red-600" />
+                <ArrowTrendingDownIcon className="h-6 w-6 text-red-700" />
               )}
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <InstrumentIcon instrument={trade.instrument} />
               </h3>
-              <p className="text-sm text-gray-500">
-                {new Date(trade.date).toLocaleDateString()}
+              <p className="text-sm text-gray-600 font-medium">
+                {new Date(trade.date).toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
               </p>
             </div>
           </div>
           <div className="text-right">
             <div className="flex items-center justify-end space-x-2 mb-1">
-              <div className={`text-xl font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
+              <div className={`text-2xl font-bold ${isProfitable ? 'text-green-700' : 'text-red-700'}`}>
                 {formatCurrency(trade.pnl)}
               </div>
               {trade.pipes && trade.pipes !== '0' && trade.pipes !== '0' && (
-                <span className={`text-xs px-1.5 py-0.5 rounded ${trade.pipes.startsWith('-') ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                <span className={`text-xs px-2 py-1 rounded-lg font-semibold ${trade.pipes.startsWith('-') ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                   {trade.pipes.startsWith('-') ? '' : '+'}{trade.pipes}p
                 </span>
               )}
             </div>
             <div className="flex items-center justify-end space-x-2">
-              <div className={`text-sm font-medium ${resultColor}`}>
-                {trade.result?.toUpperCase()}
+              <div className={`text-sm font-bold px-2 py-1 rounded-lg ${resultColor} bg-opacity-10`}>
+                {tradeResult ? tradeResult.toUpperCase() : 'N/A'}
               </div>
               {trade.isBacktest && (
-                <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">
+                <span className="text-xs px-2 py-1 rounded-lg bg-blue-100 text-blue-800 font-semibold">
                   BT
                 </span>
               )}
@@ -463,36 +578,106 @@ const Trades = ({ userId }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="flex items-center space-x-2">
-            <ArrowUpIcon className={`h-4 w-4 ${trade.direction === 'Long' ? 'text-blue-500' : 'text-purple-500'}`} />
-            <span className="text-sm text-gray-600">
-              {trade.direction} • {trade.lotSize} lots
-            </span>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
+            <ArrowUpIcon className={`h-5 w-5 ${trade.direction === 'Long' ? 'text-blue-600' : 'text-purple-600'}`} />
+            <div>
+              <div className="text-xs text-gray-500">Direction</div>
+              <div className="text-sm font-semibold text-gray-900">
+                {trade.direction} • {trade.lotSize} lots
+              </div>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <StarIcon className="h-4 w-4 text-yellow-500" />
-            <span className="text-sm text-gray-600">
-              Score: {trade.executionScore}/10
-            </span>
+          <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
+            {trade.executionScore ? (
+              <>
+                <StarIcon className="h-5 w-5 text-yellow-600" />
+                <div>
+                  <div className="text-xs text-gray-500">Execution</div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {trade.executionScore}/10
+                  </div>
+                </div>
+              </>
+            ) : trade.entryPrice ? (
+              <>
+                <BanknotesIcon className="h-5 w-5 text-blue-600" />
+                <div>
+                  <div className="text-xs text-gray-500">Entry Price</div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {trade.entryPrice}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <BanknotesIcon className="h-5 w-5 text-gray-400" />
+                <div>
+                  <div className="text-xs text-gray-500">Trade #</div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {trade.tradeNumber || 'N/A'}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-          <div className="flex items-center space-x-2">
-            <ChartBarIcon className="h-4 w-4 text-gray-400" />
-            <span className="text-sm text-gray-600">
-              {trade.strategy || 'N/A'}
-            </span>
+          <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
+            <ChartBarIcon className="h-5 w-5 text-indigo-600" />
+            <div>
+              <div className="text-xs text-gray-500">Strategy</div>
+              <div className="text-sm font-semibold text-gray-900 truncate">
+                {trade.strategy || 'N/A'}
+              </div>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <ClockIcon className="h-4 w-4 text-gray-400" />
-            <span className="text-sm text-gray-600">
-              {trade.session || 'N/A'}
-            </span>
+          <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
+            {trade.session ? (
+              <>
+                <ClockIcon className="h-5 w-5 text-gray-600" />
+                <div>
+                  <div className="text-xs text-gray-500">Session</div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {trade.session}
+                  </div>
+                </div>
+              </>
+            ) : trade.riskReward ? (
+              <>
+                <ArrowTrendingUpIcon className="h-5 w-5 text-green-600" />
+                <div>
+                  <div className="text-xs text-gray-500">Risk/Reward</div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {trade.riskReward}
+                  </div>
+                </div>
+              </>
+            ) : trade.exitPrice ? (
+              <>
+                <BanknotesIcon className="h-5 w-5 text-red-600" />
+                <div>
+                  <div className="text-xs text-gray-500">Exit Price</div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {trade.exitPrice}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <ClockIcon className="h-5 w-5 text-gray-400" />
+                <div>
+                  <div className="text-xs text-gray-500">Date</div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {new Date(trade.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         {trade.notes && (
           <div className="mb-4">
-            <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+            <p className="text-sm text-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 p-3 rounded-lg border-l-4 border-gray-300 line-clamp-2">
               {trade.notes}
             </p>
           </div>
@@ -503,34 +688,40 @@ const Trades = ({ userId }) => {
             <img
               src={trade.screenshotUrl}
               alt="Trade screenshot"
-              className="w-full h-32 object-cover rounded-lg cursor-pointer"
+              className="w-full h-32 object-cover rounded-lg cursor-pointer border-2 border-gray-200 hover:border-blue-400 transition-all"
               onClick={() => {
                 // Open fullscreen view
                 const modal = document.createElement('div');
-                modal.className = 'fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50';
+                modal.className = 'fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 backdrop-blur-sm';
                 modal.onclick = () => modal.remove();
                 
                 const img = document.createElement('img');
                 img.src = trade.screenshotUrl;
-                img.className = 'max-w-[90vw] max-h-[90vh] object-contain';
+                img.className = 'max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl';
+                
+                const closeButton = document.createElement('button');
+                closeButton.innerHTML = '×';
+                closeButton.className = 'absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition-colors z-10';
+                closeButton.onclick = () => modal.remove();
                 
                 modal.appendChild(img);
+                modal.appendChild(closeButton);
                 document.body.appendChild(modal);
               }}
             />
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="text-xs text-gray-500">
+        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+          <div className="text-xs text-gray-500 font-medium">
             Trade #{trade.tradeNumber || 'N/A'}
           </div>
           <div className="flex items-center space-x-2">
             <Link
               to={`/trade/${trade._id}`}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              className="text-blue-600 hover:text-blue-800 text-sm font-semibold hover:underline transition-colors"
             >
-              View Details
+              View Details →
             </Link>
           </div>
         </div>
@@ -550,9 +741,10 @@ const Trades = ({ userId }) => {
       );
     }
 
+    const tradeResult = getTradeResult(currentTrade);
     const isProfitable = currentTrade.pnl >= 0;
-    const resultColor = currentTrade.result === 'win' ? 'text-green-600' : 
-                       currentTrade.result === 'loss' ? 'text-red-600' : 'text-yellow-600';
+    const resultColor = tradeResult === 'win' ? 'text-green-600' : 
+                       tradeResult === 'loss' ? 'text-red-600' : 'text-yellow-600';
 
     return (
       <div className="notebook-container ">
@@ -604,7 +796,7 @@ const Trades = ({ userId }) => {
                 </div>
                 <div className="flex items-center justify-end space-x-2">
                   <div className={`text-lg font-medium ${resultColor}`}>
-                    {currentTrade.tradeOutcome || currentTrade.result?.toUpperCase() || 'N/A'}
+                    {tradeResult ? tradeResult.toUpperCase() : 'N/A'}
                   </div>
                   {currentTrade.isBacktest && (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">
@@ -1032,6 +1224,7 @@ const Trades = ({ userId }) => {
                 const pageNum = index + 1;
                 const isCurrentPage = pageNum === notebookPage;
                 const tradePnl = trade.pnl >= 0;
+                const tradeResult = getTradeResult(trade);
                 
                 return (
                   <div
@@ -1053,7 +1246,7 @@ const Trades = ({ userId }) => {
                              {pageNum}
                            </div>
                            <div className={`text-xs font-bold ${tradePnl ? 'text-green-600' : 'text-red-600'}`}>
-                             {trade.result === 'win' ? '✓' : trade.result === 'loss' ? '✗' : '~'}
+                             {tradeResult === 'win' ? '✓' : tradeResult === 'loss' ? '✗' : '~'}
                            </div>
                          </div>
                          
@@ -1087,10 +1280,10 @@ const Trades = ({ userId }) => {
                              )}
                            </div>
                            <div className={`text-xs px-2 py-1 rounded-full font-bold ${
-                             (trade.tradeOutcome === 'Win' || trade.result === 'win') ? 'bg-green-600 text-white' : 
-                             (trade.tradeOutcome === 'Loss' || trade.result === 'loss') ? 'bg-red-600 text-white' : 'bg-yellow-600 text-white'
+                             tradeResult === 'win' ? 'bg-green-600 text-white' : 
+                             tradeResult === 'loss' ? 'bg-red-600 text-white' : 'bg-yellow-600 text-white'
                            }`}>
-                             {trade.tradeOutcome || trade.result?.toUpperCase() || 'N/A'}
+                             {tradeResult ? tradeResult.toUpperCase() : 'N/A'}
                            </div>
                          </div>
                          
@@ -1207,21 +1400,43 @@ const Trades = ({ userId }) => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">All Trades</h1>
               <p className="mt-1 text-sm text-gray-600">
                 {filteredTrades.length > 0 ? (
                   <>
-                    Showing {filteredTrades.length} trades
+                    Showing {filteredTrades.length} {filteredTrades.length === 1 ? 'trade' : 'trades'}
                     {totalPages > 1 && ` (Page ${currentPage} of ${totalPages})`}
                   </>
                 ) : (
                   'No trades found'
                 )}
               </p>
+            </div>
+
+            {/* Search Bar */}
+            <div className="flex-1 max-w-md lg:ml-8">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search trades, notes, instruments..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               {/* View Toggle Buttons */}
@@ -1288,6 +1503,58 @@ const Trades = ({ userId }) => {
             </div>
           </div>
           
+          {/* Active Filter Chips */}
+          {(Object.values(filters).some(f => f !== 'all' && f !== 'date' && f !== 'desc' && f !== '') || searchTerm) && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {searchTerm && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Search: {searchTerm}
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="ml-2 hover:text-blue-600"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {filters.dateRange !== 'all' && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  Date: {filters.dateRange === 'custom' ? `${filters.customDateFrom} to ${filters.customDateTo}` : filters.dateRange}
+                </span>
+              )}
+              {filters.result !== 'all' && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  Result: {filters.result}
+                </span>
+              )}
+              {filters.instrument !== 'all' && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  Instrument: {filters.instrument}
+                </span>
+              )}
+              {filters.strategy !== 'all' && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  Strategy: {filters.strategy}
+                </span>
+              )}
+              {filters.direction !== 'all' && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  Direction: {filters.direction}
+                </span>
+              )}
+              {filters.tradeType !== 'all' && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  Type: {filters.tradeType}
+                </span>
+              )}
+              {filters.preTradeChecklist !== 'all' && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  Checklist: {filters.preTradeChecklist}
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Filters Panel */}
           {showFilters && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -1310,14 +1577,36 @@ const Trades = ({ userId }) => {
                   <select
                     value={filters.dateRange}
                     onChange={(e) => setFilters({...filters, dateRange: e.target.value})}
-                    className="form-input w-full"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   >
                     <option value="all">All Time</option>
+                    <option value="today">Today</option>
                     <option value="7d">Last 7 Days</option>
                     <option value="30d">Last 30 Days</option>
                     <option value="90d">Last 90 Days</option>
                     <option value="1y">Last Year</option>
+                    <option value="custom">Custom Range</option>
                   </select>
+                  
+                  {/* Custom Date Range Inputs */}
+                  {filters.dateRange === 'custom' && (
+                    <div className="mt-2 space-y-2">
+                      <input
+                        type="date"
+                        value={filters.customDateFrom}
+                        onChange={(e) => setFilters({...filters, customDateFrom: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="From"
+                      />
+                      <input
+                        type="date"
+                        value={filters.customDateTo}
+                        onChange={(e) => setFilters({...filters, customDateTo: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="To"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Result Filter */}
@@ -1328,12 +1617,12 @@ const Trades = ({ userId }) => {
                   <select
                     value={filters.result}
                     onChange={(e) => setFilters({...filters, result: e.target.value})}
-                    className="form-input w-full"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   >
                     <option value="all">All Results</option>
                     <option value="win">Wins</option>
                     <option value="loss">Losses</option>
-                    <option value="breakeven">Breakeven</option>
+                    <option value="be">Breakeven</option>
                   </select>
                 </div>
 
@@ -1345,7 +1634,7 @@ const Trades = ({ userId }) => {
                   <select
                     value={filters.instrument}
                     onChange={(e) => setFilters({...filters, instrument: e.target.value})}
-                    className="form-input w-full"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   >
                     <option value="all">All Instruments</option>
                     {getUniqueValues('instrument').map(instrument => (
@@ -1362,7 +1651,7 @@ const Trades = ({ userId }) => {
                   <select
                     value={filters.strategy}
                     onChange={(e) => setFilters({...filters, strategy: e.target.value})}
-                    className="form-input w-full"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   >
                     <option value="all">All Strategies</option>
                     {getUniqueValues('strategy').map(strategy => (
@@ -1379,7 +1668,7 @@ const Trades = ({ userId }) => {
                   <select
                     value={filters.direction}
                     onChange={(e) => setFilters({...filters, direction: e.target.value})}
-                    className="form-input w-full"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   >
                     <option value="all">All Directions</option>
                     <option value="Long">Long</option>
@@ -1395,7 +1684,7 @@ const Trades = ({ userId }) => {
                   <select
                     value={filters.tradeType}
                     onChange={(e) => setFilters({...filters, tradeType: e.target.value})}
-                    className="form-input w-full"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   >
                     <option value="all">All Trades</option>
                     <option value="real">Real Trades</option>
@@ -1414,7 +1703,7 @@ const Trades = ({ userId }) => {
                   <select
                     value={filters.preTradeChecklist}
                     onChange={(e) => setFilters({...filters, preTradeChecklist: e.target.value})}
-                    className="form-input w-full"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   >
                     <option value="all">All Trades</option>
                     <option value="completed">With Checklist</option>
@@ -1437,7 +1726,7 @@ const Trades = ({ userId }) => {
                   <select
                     value={filters.sortBy}
                     onChange={(e) => setFilters({...filters, sortBy: e.target.value})}
-                    className="form-input w-full"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   >
                     <option value="date">Date</option>
                     <option value="pnl">P&L</option>
@@ -1454,7 +1743,7 @@ const Trades = ({ userId }) => {
                   <select
                     value={filters.sortOrder}
                     onChange={(e) => setFilters({...filters, sortOrder: e.target.value})}
-                    className="form-input w-full"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   >
                     <option value="desc">Descending</option>
                     <option value="asc">Ascending</option>
@@ -1465,7 +1754,7 @@ const Trades = ({ userId }) => {
                 <div className="flex items-end">
                   <button
                     onClick={resetFilters}
-                    className="btn-secondary w-full"
+                    className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm border border-gray-300"
                   >
                     Reset Filters
                   </button>
@@ -1479,6 +1768,73 @@ const Trades = ({ userId }) => {
       <main className={`${viewMode === 'notebook' ? 'max-w-none' : 'max-w-7xl'} mx-auto py-6 sm:px-6 lg:px-8`}>
         <div className="px-4 py-4 sm:px-0">
           
+          {/* Quick Stats Dashboard */}
+          {filteredTrades.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Total Trades</p>
+                    <p className="text-3xl font-bold text-gray-900">{stats.totalTrades}</p>
+                    <p className="text-xs text-gray-500 mt-2 font-medium">
+                      {stats.wins}W • {stats.losses}L
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <ChartBarIcon className="h-6 w-6 text-gray-600" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Total P&L</p>
+                    <p className={`text-3xl font-bold ${stats.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(stats.totalPnL)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2 font-medium">
+                      Avg: {formatCurrency(stats.avgPnL)}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <CurrencyDollarIcon className="h-6 w-6 text-gray-600" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Win Rate</p>
+                    <p className="text-3xl font-bold text-gray-900">{stats.winRate}%</p>
+                    <p className="text-xs text-gray-500 mt-2 font-medium">
+                      {stats.wins} wins of {stats.totalTrades}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <FireIcon className="h-6 w-6 text-gray-600" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Execution</p>
+                    <p className="text-3xl font-bold text-gray-900">{stats.avgExecutionScore}/10</p>
+                    <p className="text-xs text-gray-500 mt-2 font-medium">
+                      {stats.totalLots.toFixed(1)} total lots
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <StarIcon className="h-6 w-6 text-gray-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Content based on view mode */}
           {filteredTrades.length > 0 ? (
             <>

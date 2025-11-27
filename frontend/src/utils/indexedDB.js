@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'TradeJournalDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented to trigger upgrade for apiCache store
 
 // Store names
 const STORES = {

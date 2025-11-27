@@ -35,6 +35,7 @@ app.use('/api/journal', require('./routes/journal'));
 app.use('/api/push', require('./routes/push'));
 app.use('/api/pwa', require('./routes/pwa'));
 app.use('/api/checklists', require('./routes/checklists'));
+app.use('/api/analytics', require('./routes/analytics'));
 
 // Basic route
 app.get('/', (req, res) => {

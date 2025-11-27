@@ -10,7 +10,8 @@ export const journalApi = {
   // Get all journal entries with filtering and pagination
   async getJournalEntries(options = {}) {
     const {
-      limit = 1000, // Increased default limit to show all entries
+      page,
+      limit = 20,
       sortBy = '-createdAt',
       mood,
       category,
@@ -28,6 +29,9 @@ export const journalApi = {
       sortBy
     };
 
+    // Add pagination if provided
+    if (page) params.page = page;
+
     // Add optional filters
     if (mood) params.mood = mood;
     if (category) params.category = category;
@@ -40,7 +44,9 @@ export const journalApi = {
     if (template) params.template = template;
 
     try {
-      const response = await journalAPI.getJournalEntries(MOCK_USER_ID, params);
+      // Use userId from options if provided, otherwise fall back to MOCK_USER_ID
+      const userId = options.userId || MOCK_USER_ID;
+      const response = await journalAPI.getJournalEntries(userId, params);
       return response;
     } catch (error) {
       console.error('Failed to fetch journal entries:', error);
