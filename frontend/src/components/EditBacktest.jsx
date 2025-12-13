@@ -1,36 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { 
   PlusIcon, 
   XMarkIcon, 
   PhotoIcon,
   TagIcon,
-  SparklesIcon,
-  DocumentDuplicateIcon,
-  BookmarkIcon
+  SparklesIcon
 } from '@heroicons/react/24/outline';
-import BacktestTemplateManager from './BacktestTemplateManager';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
-const NewBacktest = ({ userId }) => {
+const EditBacktest = ({ userId }) => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [loading, setLoading] = useState(false);
+  const { id } = useParams();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [masterCards, setMasterCards] = useState([]);
-  
-  // Template states
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
-  const [templateName, setTemplateName] = useState('');
-  const [templateDescription, setTemplateDescription] = useState('');
-  const [templateCategory, setTemplateCategory] = useState('custom');
 
   // Form data
   const [formData, setFormData] = useState({
-    masterCardId: searchParams.get('masterCardId') || '',
+    masterCardId: '',
     date: new Date().toISOString().split('T')[0],
     tradeNumber: '',
     instrument: '',
@@ -66,20 +57,71 @@ const NewBacktest = ({ userId }) => {
   });
   const [existingChips, setExistingChips] = useState([]);
 
-  // Screenshots state
-  const [screenshots, setScreenshots] = useState({
+  // Screenshots state - existing screenshots and new ones
+  const [existingScreenshots, setExistingScreenshots] = useState([]);
+  const [screenshotsToRemove, setScreenshotsToRemove] = useState([]);
+  const [newScreenshots, setNewScreenshots] = useState({
     before: { file: null, description: '' },
     entry: { file: null, description: '' },
     after: { file: null, description: '' }
   });
 
-  // Fetch master cards and existing chips
+  // Fetch backtest data and master cards
   useEffect(() => {
     const fetchData = async () => {
-      if (!userId) return;
+      if (!userId || !id) return;
 
-      // Fetch master cards
+      setLoading(true);
       try {
+        // Fetch backtest
+        const backtestResponse = await fetch(`${API_BASE_URL}/backtests/${id}`);
+        if (!backtestResponse.ok) throw new Error('Failed to fetch backtest');
+        
+        const backtestData = await backtestResponse.json();
+        const backtest = backtestData.backtest;
+        
+        // Populate form data
+        setFormData({
+          masterCardId: backtest.masterCardId?._id || backtest.masterCardId || '',
+          date: backtest.date ? new Date(backtest.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          tradeNumber: backtest.tradeNumber || '',
+          instrument: backtest.instrument || '',
+          tradePair: backtest.tradePair || '',
+          entryPrice: backtest.entryPrice || '',
+          exitPrice: backtest.exitPrice || '',
+          stopLoss: backtest.stopLoss || '',
+          takeProfit: backtest.takeProfit || '',
+          pnl: backtest.pnl || '',
+          result: backtest.result || '',
+          direction: backtest.direction || '',
+          lotSize: backtest.lotSize || '',
+          positionSize: backtest.positionSize || '',
+          riskReward: backtest.riskReward || '',
+          patternIdentified: backtest.patternIdentified || '',
+          marketCondition: backtest.marketCondition || '',
+          confidence: backtest.confidence || '',
+          reasonForEntry: backtest.reasonForEntry || '',
+          reasonForExit: backtest.reasonForExit || '',
+          whatWorked: backtest.whatWorked || '',
+          whatDidntWork: backtest.whatDidntWork || '',
+          improvementAreas: backtest.improvementAreas || '',
+          backtestNotes: backtest.backtestNotes || ''
+        });
+
+        // Set custom chips
+        if (backtest.customChips && backtest.customChips.length > 0) {
+          setCustomChips(backtest.customChips.map((chip, idx) => ({
+            ...chip,
+            id: chip._id || Date.now() + idx
+          })));
+        }
+
+        // Set existing screenshots
+        if (backtest.screenshots && backtest.screenshots.length > 0) {
+          setExistingScreenshots(backtest.screenshots);
+        }
+
+        // Fetch master cards
         const masterCardsResponse = await fetch(`${API_BASE_URL}/master-cards?userId=${userId}`);
         if (masterCardsResponse.ok) {
           const masterCardsData = await masterCardsResponse.json();
@@ -87,51 +129,23 @@ const NewBacktest = ({ userId }) => {
             setMasterCards(masterCardsData.masterCards || []);
           }
         }
-      } catch (err) {
-        console.error('Error fetching master cards:', err);
-      }
 
-      // Fetch existing chips
-      try {
-        const response = await fetch(`${API_BASE_URL}/backtests/chips?userId=${userId}`);
-        if (response.ok) {
-          const data = await response.json();
-          setExistingChips(data.chips || []);
-        } else {
-          console.log('No existing chips found or server error');
-          setExistingChips([]);
+        // Fetch existing chips
+        const chipsResponse = await fetch(`${API_BASE_URL}/backtests/chips?userId=${userId}`);
+        if (chipsResponse.ok) {
+          const chipsData = await chipsResponse.json();
+          setExistingChips(chipsData.chips || []);
         }
       } catch (err) {
-        console.error('Error fetching existing chips:', err);
-        setExistingChips([]);
-      }
-
-      // Check for clone data in sessionStorage
-      const cloneData = sessionStorage.getItem('cloneBacktest');
-      if (cloneData) {
-        try {
-          const parsedData = JSON.parse(cloneData);
-          setFormData(prev => ({
-            ...prev,
-            ...parsedData,
-            masterCardId: searchParams.get('masterCardId') || parsedData.masterCardId || '',
-            date: new Date().toISOString().split('T')[0]
-          }));
-          
-          if (parsedData.customChips) {
-            setCustomChips(parsedData.customChips);
-          }
-          
-          // Clear the clone data
-          sessionStorage.removeItem('cloneBacktest');
-        } catch (err) {
-          console.error('Error parsing clone data:', err);
-        }
+        console.error('Error fetching data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
-  }, [userId, searchParams]);
+  }, [userId, id]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -158,111 +172,35 @@ const NewBacktest = ({ userId }) => {
   };
 
   // Screenshot management
-  const handleScreenshotChange = (type, file) => {
-    setScreenshots(prev => ({
+  const handleNewScreenshotChange = (type, file) => {
+    setNewScreenshots(prev => ({
       ...prev,
       [type]: { ...prev[type], file }
     }));
   };
 
-  const handleScreenshotDescriptionChange = (type, description) => {
-    setScreenshots(prev => ({
+  const handleNewScreenshotDescriptionChange = (type, description) => {
+    setNewScreenshots(prev => ({
       ...prev,
       [type]: { ...prev[type], description }
     }));
   };
 
-  const removeScreenshot = (type) => {
-    setScreenshots(prev => ({
+  const removeNewScreenshot = (type) => {
+    setNewScreenshots(prev => ({
       ...prev,
       [type]: { file: null, description: '' }
     }));
   };
 
-  // Handle template selection
-  const handleTemplateSelect = (templateData) => {
-    // Apply template data to form
-    setFormData(prev => ({
-      ...prev,
-      ...templateData,
-      // Preserve masterCardId and date
-      masterCardId: prev.masterCardId,
-      date: prev.date,
-      // Don't copy price/pnl data
-      entryPrice: '',
-      exitPrice: '',
-      stopLoss: '',
-      takeProfit: '',
-      pnl: '',
-      result: ''
-    }));
-
-    // Apply custom chips from template
-    if (templateData.customChips && templateData.customChips.length > 0) {
-      setCustomChips(templateData.customChips);
-    }
-  };
-
-  // Save current form as template
-  const handleSaveAsTemplate = async () => {
-    if (!templateName.trim()) {
-      alert('Please enter a template name');
-      return;
-    }
-
-    try {
-      // Build template data, only including non-empty fields
-      const templateData = {};
-      
-      if (formData.instrument) templateData.instrument = formData.instrument;
-      if (formData.tradePair) templateData.tradePair = formData.tradePair;
-      if (formData.direction) templateData.direction = formData.direction;
-      if (formData.lotSize) templateData.lotSize = formData.lotSize;
-      if (formData.positionSize) templateData.positionSize = formData.positionSize;
-      if (formData.riskReward) templateData.riskReward = formData.riskReward;
-      if (formData.patternIdentified) templateData.patternIdentified = formData.patternIdentified;
-      if (formData.marketCondition) templateData.marketCondition = formData.marketCondition;
-      if (formData.confidence) templateData.confidence = formData.confidence;
-      if (formData.reasonForEntry) templateData.reasonForEntry = formData.reasonForEntry;
-      if (formData.reasonForExit) templateData.reasonForExit = formData.reasonForExit;
-      if (formData.whatWorked) templateData.whatWorked = formData.whatWorked;
-      if (formData.whatDidntWork) templateData.whatDidntWork = formData.whatDidntWork;
-      if (formData.improvementAreas) templateData.improvementAreas = formData.improvementAreas;
-      if (formData.backtestNotes) templateData.backtestNotes = formData.backtestNotes;
-      if (customChips && customChips.length > 0) templateData.customChips = customChips;
-
-      const response = await fetch(`${API_BASE_URL}/backtest-templates`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          name: templateName,
-          description: templateDescription,
-          category: templateCategory,
-          templateData
-        })
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setShowSaveTemplateModal(false);
-        setTemplateName('');
-        setTemplateDescription('');
-        setTemplateCategory('custom');
-        alert('Template saved successfully!');
-      } else {
-        alert(data.message || 'Failed to save template');
-      }
-    } catch (error) {
-      console.error('Error saving template:', error);
-      alert('Error saving template');
-    }
+  const removeExistingScreenshot = (screenshotId) => {
+    setScreenshotsToRemove(prev => [...prev, screenshotId]);
+    setExistingScreenshots(prev => prev.filter(s => s._id !== screenshotId));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     setError(null);
 
     try {
@@ -270,23 +208,27 @@ const NewBacktest = ({ userId }) => {
       
       // Add basic form data
       Object.keys(formData).forEach(key => {
-        if (formData[key]) {
+        if (formData[key] !== '' && formData[key] !== null && formData[key] !== undefined) {
           formDataToSend.append(key, formData[key]);
         }
       });
 
-      formDataToSend.append('userId', userId);
       formDataToSend.append('customChips', JSON.stringify(customChips));
 
-      // Add screenshots and their metadata
+      // Handle screenshot removal
+      if (screenshotsToRemove.length > 0) {
+        formDataToSend.append('removeScreenshots', JSON.stringify(screenshotsToRemove));
+      }
+
+      // Add new screenshots and their metadata
       const screenshotTypes = [];
       const screenshotDescriptions = [];
       
-      Object.keys(screenshots).forEach(type => {
-        if (screenshots[type].file) {
-          formDataToSend.append('screenshots', screenshots[type].file);
+      Object.keys(newScreenshots).forEach(type => {
+        if (newScreenshots[type].file) {
+          formDataToSend.append('screenshots', newScreenshots[type].file);
           screenshotTypes.push(type);
-          screenshotDescriptions.push(screenshots[type].description);
+          screenshotDescriptions.push(newScreenshots[type].description);
         }
       });
 
@@ -295,31 +237,31 @@ const NewBacktest = ({ userId }) => {
         formDataToSend.append('screenshotDescriptions', JSON.stringify(screenshotDescriptions));
       }
 
-      const response = await fetch(`${API_BASE_URL}/backtests`, {
-        method: 'POST',
+      const response = await fetch(`${API_BASE_URL}/backtests/${id}`, {
+        method: 'PUT',
         body: formDataToSend
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create backtest');
+        throw new Error(errorData.message || 'Failed to update backtest');
       }
 
       const result = await response.json();
       setSuccess(true);
       setTimeout(() => {
-        // Navigate to the master card detail page
+        // Navigate to the master card detail page or backtest detail
         if (formData.masterCardId) {
           navigate(`/backtests/master/${formData.masterCardId}`);
         } else {
-          navigate('/backtests');
+          navigate(`/backtests/${id}`);
         }
       }, 1500);
 
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -328,6 +270,17 @@ const NewBacktest = ({ userId }) => {
     '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1'
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="spinner mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading backtest...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (success) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -335,41 +288,20 @@ const NewBacktest = ({ userId }) => {
           <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
             <SparklesIcon className="h-6 w-6 text-green-600" />
           </div>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Backtest Created!</h3>
-          <p className="mt-1 text-sm text-gray-500">Redirecting to backtests...</p>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Backtest Updated!</h3>
+          <p className="mt-1 text-sm text-gray-500">Redirecting...</p>
         </div>
       </div>
     );
   }
 
+  // Reuse the same form structure as NewBacktest but with edit-specific changes
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-1 py-8">
         <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">New Backtest</h1>
-              <p className="mt-1 text-gray-600">Create a detailed backtest with custom labels and analysis</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowTemplateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                <DocumentDuplicateIcon className="h-5 w-5" />
-                Use Template
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowSaveTemplateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <BookmarkIcon className="h-5 w-5" />
-                Save as Template
-              </button>
-            </div>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Backtest</h1>
+          <p className="mt-1 text-gray-600">Update your backtest details</p>
         </div>
 
         {error && (
@@ -379,7 +311,7 @@ const NewBacktest = ({ userId }) => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Trade Information */}
+          {/* Basic Trade Information - Same as NewBacktest */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Trade Information</h3>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -401,11 +333,6 @@ const NewBacktest = ({ userId }) => {
                     </option>
                   ))}
                 </select>
-                {masterCards.length === 0 && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    No master cards found. <Link to="/backtests" className="text-blue-600 hover:underline">Create one first</Link>
-                  </p>
-                )}
               </div>
 
               <div>
@@ -576,7 +503,7 @@ const NewBacktest = ({ userId }) => {
             </div>
           </div>
 
-          {/* Pattern & Confidence */}
+          {/* Pattern & Confidence - Same as NewBacktest */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Pattern & Confidence</h3>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -624,11 +551,10 @@ const NewBacktest = ({ userId }) => {
             </div>
           </div>
 
-          {/* Custom Labels */}
+          {/* Custom Labels - Same as NewBacktest */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Custom Labels & Tags</h3>
             
-            {/* Existing Chips */}
             {existingChips.length > 0 && (
               <div className="mb-4">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Quick Add from Previous</h4>
@@ -652,7 +578,6 @@ const NewBacktest = ({ userId }) => {
               </div>
             )}
 
-            {/* Add New Chip */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Label Name</label>
@@ -717,7 +642,6 @@ const NewBacktest = ({ userId }) => {
               Add Label
             </button>
 
-            {/* Current Chips */}
             {customChips.length > 0 && (
               <div className="mt-4">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Current Labels</h4>
@@ -748,66 +672,107 @@ const NewBacktest = ({ userId }) => {
             )}
           </div>
 
-          {/* Screenshots */}
+          {/* Screenshots - Show existing and allow adding new */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Screenshots</h3>
             
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              {['before', 'entry', 'after'].map(type => (
-                <div key={type} className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3 capitalize">
-                    {type === 'before' ? 'Before Trade' : type === 'entry' ? 'Trade Entry' : 'After Trade'}
-                  </h4>
-                  
-                  {screenshots[type].file ? (
-                    <div className="space-y-3">
+            {/* Existing Screenshots */}
+            {existingScreenshots.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Existing Screenshots</h4>
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                  {existingScreenshots.map((screenshot) => (
+                    <div key={screenshot._id} className="space-y-2">
                       <div className="relative">
                         <img
-                          src={URL.createObjectURL(screenshots[type].file)}
-                          alt={`${type} screenshot`}
+                          src={screenshot.url}
+                          alt={`${screenshot.type} screenshot`}
                           className="w-full h-32 object-cover rounded-md"
                         />
                         <button
                           type="button"
-                          onClick={() => removeScreenshot(type)}
+                          onClick={() => removeExistingScreenshot(screenshot._id)}
                           className="absolute top-2 right-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-600 text-white hover:bg-red-700"
                         >
                           <XMarkIcon className="w-4 h-4" />
                         </button>
-                      </div>
-                      <textarea
-                        placeholder={`Describe the ${type} screenshot...`}
-                        value={screenshots[type].description}
-                        onChange={(e) => handleScreenshotDescriptionChange(type, e.target.value)}
-                        rows={3}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 text-sm placeholder-gray-400 resize-none"
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="cursor-pointer">
-                        <div className="border-2 border-gray-300 border-dashed rounded-lg p-6 text-center hover:border-gray-400">
-                          <PhotoIcon className="mx-auto h-8 w-8 text-gray-400" />
-                          <span className="mt-2 block text-sm font-medium text-gray-600">
-                            Upload {type} screenshot
+                        <div className="absolute top-2 left-2">
+                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-black bg-opacity-75 text-white">
+                            {screenshot.type.charAt(0).toUpperCase() + screenshot.type.slice(1)}
                           </span>
-                          <span className="block text-xs text-gray-500">PNG, JPG, GIF up to 10MB</span>
                         </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleScreenshotChange(type, e.target.files[0])}
-                          className="hidden"
-                        />
-                      </label>
+                      </div>
+                      {screenshot.description && (
+                        <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded-md">
+                          {screenshot.description}
+                        </p>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
+              </div>
+            )}
+
+            {/* New Screenshots */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Add New Screenshots</h4>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                {['before', 'entry', 'after'].map(type => (
+                  <div key={type} className="border border-gray-200 rounded-lg p-4">
+                    <h5 className="text-sm font-medium text-gray-700 mb-3 capitalize">
+                      {type === 'before' ? 'Before Trade' : type === 'entry' ? 'Trade Entry' : 'After Trade'}
+                    </h5>
+                    
+                    {newScreenshots[type].file ? (
+                      <div className="space-y-3">
+                        <div className="relative">
+                          <img
+                            src={URL.createObjectURL(newScreenshots[type].file)}
+                            alt={`${type} screenshot`}
+                            className="w-full h-32 object-cover rounded-md"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeNewScreenshot(type)}
+                            className="absolute top-2 right-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-600 text-white hover:bg-red-700"
+                          >
+                            <XMarkIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <textarea
+                          placeholder={`Describe the ${type} screenshot...`}
+                          value={newScreenshots[type].description}
+                          onChange={(e) => handleNewScreenshotDescriptionChange(type, e.target.value)}
+                          rows={3}
+                          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 text-sm placeholder-gray-400 resize-none"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="cursor-pointer">
+                          <div className="border-2 border-gray-300 border-dashed rounded-lg p-6 text-center hover:border-gray-400">
+                            <PhotoIcon className="mx-auto h-8 w-8 text-gray-400" />
+                            <span className="mt-2 block text-sm font-medium text-gray-600">
+                              Upload {type} screenshot
+                            </span>
+                            <span className="block text-xs text-gray-500">PNG, JPG, GIF up to 10MB</span>
+                          </div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleNewScreenshotChange(type, e.target.files[0])}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Analysis */}
+          {/* Analysis - Same as NewBacktest */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Analysis</h3>
             <div className="space-y-4">
@@ -822,7 +787,6 @@ const NewBacktest = ({ userId }) => {
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 text-sm placeholder-gray-400 resize-none"
                 />
               </div>
-
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">What Didn't Work</label>
@@ -890,116 +854,35 @@ const NewBacktest = ({ userId }) => {
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
-              onClick={() => navigate('/backtests')}
+              onClick={() => navigate(`/backtests/${id}`)}
               className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={saving}
               className="inline-flex justify-center items-center px-6 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
-              {loading ? (
+              {saving ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Creating...
+                  Updating...
                 </>
               ) : (
-                'Create Backtest'
+                'Update Backtest'
               )}
             </button>
           </div>
         </form>
       </div>
-
-      {/* Template Manager Modal */}
-      <BacktestTemplateManager
-        userId={userId}
-        showModal={showTemplateModal}
-        onClose={() => setShowTemplateModal(false)}
-        onSelectTemplate={handleTemplateSelect}
-      />
-
-      {/* Save Template Modal */}
-      {showSaveTemplateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Save as Template</h3>
-              <button
-                onClick={() => setShowSaveTemplateModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Template Name *
-                </label>
-                <input
-                  type="text"
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., My Swing Trade Setup"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (optional)
-                </label>
-                <textarea
-                  value={templateDescription}
-                  onChange={(e) => setTemplateDescription(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Describe this template..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category
-                </label>
-                <select
-                  value={templateCategory}
-                  onChange={(e) => setTemplateCategory(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="custom">Custom</option>
-                  <option value="swing">Swing Trading</option>
-                  <option value="scalping">Scalping</option>
-                  <option value="breakout">Breakout</option>
-                  <option value="reversal">Reversal</option>
-                  <option value="trend-following">Trend Following</option>
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  onClick={() => setShowSaveTemplateModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveAsTemplate}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Save Template
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
-export default NewBacktest;
+export default EditBacktest;
+
+
+
+
+

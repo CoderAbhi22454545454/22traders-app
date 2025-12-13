@@ -30,12 +30,15 @@ app.use(morgan('combined'));
 // Routes
 app.use('/api/trades', require('./routes/trades'));
 app.use('/api/backtests', require('./routes/backtests'));
+app.use('/api/master-cards', require('./routes/masterCards'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/journal', require('./routes/journal'));
 app.use('/api/push', require('./routes/push'));
 app.use('/api/pwa', require('./routes/pwa'));
 app.use('/api/checklists', require('./routes/checklists'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/backtest-goals', require('./routes/backtestGoals'));
+app.use('/api/backtest-templates', require('./routes/backtestTemplates'));
 
 // Basic route
 app.get('/', (req, res) => {

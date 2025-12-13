@@ -584,9 +584,9 @@ const Trades = ({ userId }) => {
             <div>
               <div className="text-xs text-gray-500">Direction</div>
               <div className="text-sm font-semibold text-gray-900">
-                {trade.direction} • {trade.lotSize} lots
-              </div>
-            </div>
+              {trade.direction} • {trade.lotSize} lots
+          </div>
+          </div>
           </div>
           <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
             {trade.executionScore ? (
@@ -626,8 +626,8 @@ const Trades = ({ userId }) => {
             <div>
               <div className="text-xs text-gray-500">Strategy</div>
               <div className="text-sm font-semibold text-gray-900 truncate">
-                {trade.strategy || 'N/A'}
-              </div>
+              {trade.strategy || 'N/A'}
+          </div>
             </div>
           </div>
           <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
@@ -1554,7 +1554,7 @@ const Trades = ({ userId }) => {
               )}
             </div>
           )}
-
+          
           {/* Filters Panel */}
           {showFilters && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -1834,7 +1834,7 @@ const Trades = ({ userId }) => {
               </div>
             </div>
           )}
-
+          
           {/* Content based on view mode */}
           {filteredTrades.length > 0 ? (
             <>

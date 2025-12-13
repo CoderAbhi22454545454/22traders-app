@@ -294,8 +294,12 @@ const Analytics = ({ userId }) => {
         }
       });
 
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
-      const response = await fetch(`${API_BASE_URL}/api/analytics/comprehensive?${params}`);
+      // Get base URL and ensure it doesn't have trailing /api, we'll add it explicitly
+      let baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+      // Remove trailing /api if present to avoid double /api/api/
+      baseUrl = baseUrl.replace(/\/api\/?$/, '');
+      const API_BASE_URL = `${baseUrl}/api`;
+      const response = await fetch(`${API_BASE_URL}/analytics/comprehensive?${params}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch analytics');

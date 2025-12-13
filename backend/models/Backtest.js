@@ -61,6 +61,13 @@ const backtestSchema = new mongoose.Schema({
     required: true
   },
   
+  // Master Card reference (folder/group)
+  masterCardId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'MasterCard',
+    required: true
+  },
+  
   // Basic trade information
   date: {
     type: Date,
@@ -193,6 +200,7 @@ const backtestSchema = new mongoose.Schema({
 
 // Indexes for efficient querying
 backtestSchema.index({ userId: 1, date: -1 });
+backtestSchema.index({ masterCardId: 1, date: -1 });
 backtestSchema.index({ userId: 1, 'customChips.name': 1 });
 backtestSchema.index({ userId: 1, 'customChips.value': 1 });
 backtestSchema.index({ userId: 1, patternIdentified: 1 });

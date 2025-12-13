@@ -4,8 +4,42 @@ const { body, validationResult } = require('express-validator');
 const mongoose = require('mongoose');
 const cloudinary = require('../config/cloudinary');
 const Backtest = require('../models/Backtest');
+const BacktestGoal = require('../models/BacktestGoal');
 
 const router = express.Router();
+
+// Helper function to recalculate goals after backtest changes
+const recalculateGoals = async (userId, masterCardId = null) => {
+  try {
+    // Find all active goals for this user
+    const query = {
+      userId: new mongoose.Types.ObjectId(userId),
+      status: 'active'
+    };
+    
+    // If masterCardId is provided, recalculate both overall and this master card's goals
+    if (masterCardId) {
+      query.$or = [
+        { scope: 'overall' },
+        { scope: 'masterCard', masterCardId: new mongoose.Types.ObjectId(masterCardId) }
+      ];
+    } else {
+      query.scope = 'overall';
+    }
+    
+    const goals = await BacktestGoal.find(query);
+    
+    // Recalculate progress for each goal
+    await Promise.all(
+      goals.map(goal => BacktestGoal.calculateProgress(goal._id))
+    );
+    
+    console.log(`✅ Recalculated ${goals.length} goals for user ${userId}`);
+  } catch (error) {
+    console.error('Error recalculating goals:', error);
+    // Don't throw error - goal recalculation shouldn't break backtest operations
+  }
+};
 
 // Configure Multer for multiple file uploads
 const storage = multer.memoryStorage();
@@ -313,6 +347,9 @@ router.post('/', upload.array('screenshots', 3), backtestValidation, async (req,
     const savedBacktest = await backtest.save();
     await savedBacktest.populate('userId', 'name email');
 
+    // Recalculate goals after creating backtest
+    await recalculateGoals(userId, masterCardId);
+
     res.status(201).json({
       message: 'Backtest created successfully',
       backtest: savedBacktest
@@ -447,13 +484,16 @@ router.get('/patterns', async (req, res) => {
 // GET /api/backtests/analytics/comprehensive - Get comprehensive analytics
 router.get('/analytics/comprehensive', async (req, res) => {
   try {
-    const { userId, dateFrom, dateTo, timeRange, pattern, marketCondition, result, minConfidence, maxConfidence } = req.query;
+    const { userId, masterCardId, dateFrom, dateTo, timeRange, pattern, marketCondition, result, minConfidence, maxConfidence } = req.query;
     
     if (!userId) {
       return res.status(400).json({ message: 'User ID is required' });
     }
 
     const filter = { userId: new mongoose.Types.ObjectId(userId) };
+    if (masterCardId) {
+      filter.masterCardId = new mongoose.Types.ObjectId(masterCardId);
+    }
     
     // Date range filter
     if (dateFrom || dateTo) {
@@ -547,6 +587,50 @@ router.get('/analytics/comprehensive', async (req, res) => {
       .filter(b => b.confidence)
       .reduce((sum, b) => sum + (b.confidence || 0), 0) / backtests.filter(b => b.confidence).length || 0;
 
+    // Calculate Average R:R
+    const tradesWithRR = backtests.filter(b => b.riskReward);
+    const riskRewardRatios = tradesWithRR.map(b => {
+      const rr = b.riskReward.split(':');
+      return rr.length === 2 ? parseFloat(rr[1]) / parseFloat(rr[0]) : null;
+    }).filter(rr => rr !== null);
+    const avgRiskReward = riskRewardRatios.length > 0
+      ? riskRewardRatios.reduce((sum, rr) => sum + rr, 0) / riskRewardRatios.length
+      : 0;
+
+    // Best and Worst Trades
+    const sortedByPnL = [...backtests].sort((a, b) => (b.pnl || 0) - (a.pnl || 0));
+    const bestTrade = sortedByPnL[0];
+    const worstTrade = sortedByPnL[sortedByPnL.length - 1];
+
+    // Most Traded Pair
+    const pairCounts = {};
+    backtests.forEach(b => {
+      const pair = b.tradePair || b.instrument || 'Unknown';
+      pairCounts[pair] = (pairCounts[pair] || 0) + 1;
+    });
+    const mostTradedPair = Object.entries(pairCounts)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+
+    // Most Used Pattern
+    const patternCounts = {};
+    backtests.forEach(b => {
+      if (b.patternIdentified) {
+        patternCounts[b.patternIdentified] = (patternCounts[b.patternIdentified] || 0) + 1;
+      }
+    });
+    const mostUsedPattern = Object.entries(patternCounts)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+
+    // Most Used Market Condition
+    const marketConditionCounts = {};
+    backtests.forEach(b => {
+      if (b.marketCondition) {
+        marketConditionCounts[b.marketCondition] = (marketConditionCounts[b.marketCondition] || 0) + 1;
+      }
+    });
+    const mostUsedMarketCondition = Object.entries(marketConditionCounts)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+
     // Equity curve (cumulative P&L)
     let cumulativePnL = 0;
     const equityCurve = backtests.map((b, index) => {
@@ -589,8 +673,7 @@ router.get('/analytics/comprehensive', async (req, res) => {
       percentage: (count / totalTrades) * 100
     }));
 
-    // Best and Worst Trades
-    const sortedByPnL = [...backtests].sort((a, b) => (b.pnl || 0) - (a.pnl || 0));
+    // Best and Worst Trades (top 5)
     const bestTrades = sortedByPnL.slice(0, 5).map(b => ({
       id: b._id,
       date: b.date,
@@ -702,16 +785,212 @@ router.get('/analytics/comprehensive', async (req, res) => {
       timeAnalysis.byMonth[month].pnl += (b.pnl || 0);
     });
 
-    // Risk Analysis
-    const tradesWithRR = backtests.filter(b => b.riskReward);
-    const riskRewardRatios = tradesWithRR.map(b => {
-      const rr = b.riskReward.split(':');
-      return rr.length === 2 ? parseFloat(rr[1]) / parseFloat(rr[0]) : null;
-    }).filter(rr => rr !== null);
+    // Instrument Performance
+    const instrumentPerformance = {};
+    backtests.forEach(b => {
+      const pair = b.tradePair || b.instrument || 'Unknown';
+      if (!instrumentPerformance[pair]) {
+        instrumentPerformance[pair] = {
+          pair,
+          totalTrades: 0,
+          totalPnL: 0,
+          wins: 0,
+          losses: 0,
+          avgPnL: 0
+        };
+      }
+      instrumentPerformance[pair].totalTrades++;
+      instrumentPerformance[pair].totalPnL += (b.pnl || 0);
+      if (b.result === 'win') instrumentPerformance[pair].wins++;
+      if (b.result === 'loss') instrumentPerformance[pair].losses++;
+    });
+    const instrumentPerformanceArray = Object.values(instrumentPerformance).map(inst => ({
+      ...inst,
+      avgPnL: inst.totalPnL / inst.totalTrades,
+      winRate: inst.totalTrades > 0 ? (inst.wins / inst.totalTrades) * 100 : 0
+    })).sort((a, b) => b.totalPnL - a.totalPnL);
+
+    // Direction Performance
+    const directionStats = {
+      Long: { trades: 0, wins: 0, losses: 0, totalPnL: 0, avgPnL: 0 },
+      Short: { trades: 0, wins: 0, losses: 0, totalPnL: 0, avgPnL: 0 }
+    };
+    backtests.forEach(b => {
+      if (b.direction === 'Long' || b.direction === 'Short') {
+        directionStats[b.direction].trades++;
+        directionStats[b.direction].totalPnL += (b.pnl || 0);
+        if (b.result === 'win') directionStats[b.direction].wins++;
+        if (b.result === 'loss') directionStats[b.direction].losses++;
+      }
+    });
+    Object.keys(directionStats).forEach(dir => {
+      const stats = directionStats[dir];
+      stats.avgPnL = stats.trades > 0 ? stats.totalPnL / stats.trades : 0;
+      stats.winRate = stats.trades > 0 ? (stats.wins / stats.trades) * 100 : 0;
+    });
+
+    // R:R Analysis - Histogram
+    const rrHistogram = {};
+    riskRewardRatios.forEach(rr => {
+      const bucket = Math.floor(rr * 2) / 2; // Round to nearest 0.5
+      rrHistogram[bucket] = (rrHistogram[bucket] || 0) + 1;
+    });
+    const rrHistogramArray = Object.entries(rrHistogram)
+      .map(([rr, count]) => ({ rr: parseFloat(rr), count }))
+      .sort((a, b) => a.rr - b.rr);
+
+    // Average R:R on winning vs losing trades
+    const winningTradesWithRR = backtests.filter(b => b.result === 'win' && b.riskReward);
+    const losingTradesWithRR = backtests.filter(b => b.result === 'loss' && b.riskReward);
     
-    const avgRiskReward = riskRewardRatios.length > 0
-      ? riskRewardRatios.reduce((sum, rr) => sum + rr, 0) / riskRewardRatios.length
+    const avgRRWins = winningTradesWithRR.length > 0
+      ? winningTradesWithRR.map(b => {
+          const rr = b.riskReward.split(':');
+          return rr.length === 2 ? parseFloat(rr[1]) / parseFloat(rr[0]) : null;
+        }).filter(rr => rr !== null)
+          .reduce((sum, rr) => sum + rr, 0) / winningTradesWithRR.length
       : 0;
+    
+    const avgRRLosses = losingTradesWithRR.length > 0
+      ? losingTradesWithRR.map(b => {
+          const rr = b.riskReward.split(':');
+          return rr.length === 2 ? parseFloat(rr[1]) / parseFloat(rr[0]) : null;
+        }).filter(rr => rr !== null)
+          .reduce((sum, rr) => sum + rr, 0) / losingTradesWithRR.length
+      : 0;
+
+    // Confidence Level Impact (for scatter plot)
+    const confidenceImpact = [];
+    for (let conf = 1; conf <= 10; conf++) {
+      const tradesAtConf = backtests.filter(b => b.confidence === conf);
+      if (tradesAtConf.length > 0) {
+        const avgPnL = tradesAtConf.reduce((sum, b) => sum + (b.pnl || 0), 0) / tradesAtConf.length;
+        const winRate = tradesAtConf.filter(b => b.result === 'win').length / tradesAtConf.length * 100;
+        confidenceImpact.push({
+          confidence: conf,
+          avgPnL,
+          winRate,
+          tradeCount: tradesAtConf.length
+        });
+      }
+    }
+
+    // Market Condition Performance
+    const marketConditionPerformance = {};
+    backtests.forEach(b => {
+      if (b.marketCondition) {
+        if (!marketConditionPerformance[b.marketCondition]) {
+          marketConditionPerformance[b.marketCondition] = {
+            condition: b.marketCondition,
+            trades: 0,
+            wins: 0,
+            totalPnL: 0,
+            avgPnL: 0,
+            winRate: 0
+          };
+        }
+        marketConditionPerformance[b.marketCondition].trades++;
+        marketConditionPerformance[b.marketCondition].totalPnL += (b.pnl || 0);
+        if (b.result === 'win') marketConditionPerformance[b.marketCondition].wins++;
+      }
+    });
+    const marketConditionArray = Object.values(marketConditionPerformance).map(mc => ({
+      ...mc,
+      avgPnL: mc.totalPnL / mc.trades,
+      winRate: mc.trades > 0 ? (mc.wins / mc.trades) * 100 : 0
+    }));
+
+    // Custom Labels Usage
+    const labelUsage = {};
+    backtests.forEach(b => {
+      if (b.customChips && b.customChips.length > 0) {
+        b.customChips.forEach(chip => {
+          const key = `${chip.name}:${chip.value}`;
+          if (!labelUsage[key]) {
+            labelUsage[key] = {
+              name: chip.name,
+              value: chip.value,
+              usageCount: 0,
+              wins: 0,
+              totalPnL: 0
+            };
+          }
+          labelUsage[key].usageCount++;
+          if (b.result === 'win') labelUsage[key].wins++;
+          labelUsage[key].totalPnL += (b.pnl || 0);
+        });
+      }
+    });
+    const topLabels = Object.values(labelUsage)
+      .map(label => ({
+        ...label,
+        winRate: label.usageCount > 0 ? (label.wins / label.usageCount) * 100 : 0
+      }))
+      .sort((a, b) => b.usageCount - a.usageCount)
+      .slice(0, 10);
+
+    // Screenshot Usage
+    const screenshotStats = {
+      totalTradesWithScreenshots: 0,
+      before: 0,
+      entry: 0,
+      after: 0,
+      totalScreenshots: 0
+    };
+    backtests.forEach(b => {
+      if (b.screenshots && b.screenshots.length > 0) {
+        screenshotStats.totalTradesWithScreenshots++;
+        screenshotStats.totalScreenshots += b.screenshots.length;
+        b.screenshots.forEach(screenshot => {
+          if (screenshot.type === 'before') screenshotStats.before++;
+          if (screenshot.type === 'entry') screenshotStats.entry++;
+          if (screenshot.type === 'after') screenshotStats.after++;
+        });
+      }
+    });
+
+    // Trade Quality Insights - Keyword Extraction
+    const extractKeywords = (text) => {
+      if (!text) return [];
+      const words = text.toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter(word => word.length > 3 && !['what', 'work', 'didnt', 'this', 'that', 'with', 'from', 'were', 'have', 'been', 'will', 'your', 'them', 'they'].includes(word));
+      return words;
+    };
+
+    const whatWorkedKeywords = {};
+    const whatDidntWorkKeywords = {};
+    const improvementKeywords = {};
+    const entryReasonKeywords = {};
+    const exitReasonKeywords = {};
+
+    backtests.forEach(b => {
+      extractKeywords(b.whatWorked).forEach(word => {
+        whatWorkedKeywords[word] = (whatWorkedKeywords[word] || 0) + 1;
+      });
+      extractKeywords(b.whatDidntWork).forEach(word => {
+        whatDidntWorkKeywords[word] = (whatDidntWorkKeywords[word] || 0) + 1;
+      });
+      extractKeywords(b.improvementAreas).forEach(word => {
+        improvementKeywords[word] = (improvementKeywords[word] || 0) + 1;
+      });
+      extractKeywords(b.reasonForEntry).forEach(word => {
+        entryReasonKeywords[word] = (entryReasonKeywords[word] || 0) + 1;
+      });
+      extractKeywords(b.reasonForExit).forEach(word => {
+        exitReasonKeywords[word] = (exitReasonKeywords[word] || 0) + 1;
+      });
+    });
+
+    const getTopKeywords = (keywords, limit = 10) => {
+      return Object.entries(keywords)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([word, count]) => ({ word, count }));
+    };
+
+    // Risk Analysis
 
     // Calculate max drawdown
     let peak = 0;
@@ -780,7 +1059,40 @@ router.get('/analytics/comprehensive', async (req, res) => {
         avgLoss,
         profitFactor: profitFactor.toFixed(2),
         expectancy: expectancy.toFixed(2),
-        avgConfidence: avgConfidence.toFixed(1)
+        avgConfidence: avgConfidence.toFixed(1),
+        avgRiskReward: avgRiskReward.toFixed(2),
+        bestTrade: bestTrade ? {
+          pnl: bestTrade.pnl || 0,
+          pair: bestTrade.tradePair || bestTrade.instrument,
+          date: bestTrade.date
+        } : null,
+        worstTrade: worstTrade ? {
+          pnl: worstTrade.pnl || 0,
+          pair: worstTrade.tradePair || worstTrade.instrument,
+          date: worstTrade.date
+        } : null,
+        mostTradedPair,
+        mostUsedPattern,
+        mostUsedMarketCondition
+      },
+      instrumentPerformance: instrumentPerformanceArray,
+      directionPerformance: directionStats,
+      rrAnalysis: {
+        histogram: rrHistogramArray,
+        avgRRWins: avgRRWins.toFixed(2),
+        avgRRLosses: avgRRLosses.toFixed(2),
+        avgRiskReward: avgRiskReward.toFixed(2)
+      },
+      confidenceImpact,
+      marketConditionPerformance: marketConditionArray,
+      labelUsage: topLabels,
+      screenshotUsage: screenshotStats,
+      tradeQuality: {
+        whatWorked: getTopKeywords(whatWorkedKeywords),
+        whatDidntWork: getTopKeywords(whatDidntWorkKeywords),
+        improvementAreas: getTopKeywords(improvementKeywords),
+        entryReasons: getTopKeywords(entryReasonKeywords),
+        exitReasons: getTopKeywords(exitReasonKeywords)
       },
       performance: {
         patternPerformance: patternPerformance.map(p => ({
@@ -1161,6 +1473,10 @@ router.put('/:id', upload.array('screenshots', 3), backtestUpdateValidation, asy
       { new: true, runValidators: true }
     ).populate('userId', 'name email');
 
+    // Recalculate goals after updating backtest
+    const finalMasterCardId = masterCardId || existingBacktest.masterCardId;
+    await recalculateGoals(existingBacktest.userId.toString(), finalMasterCardId?.toString());
+
     res.json({
       message: 'Backtest updated successfully',
       backtest: updatedBacktest
@@ -1183,6 +1499,10 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Backtest not found' });
     }
 
+    // Store userId and masterCardId before deletion for goal recalculation
+    const userId = backtest.userId.toString();
+    const masterCardId = backtest.masterCardId?.toString();
+
     // Delete all screenshots from Cloudinary
     for (const screenshot of backtest.screenshots) {
       try {
@@ -1194,6 +1514,9 @@ router.delete('/:id', async (req, res) => {
 
     // Delete the backtest
     await Backtest.findByIdAndDelete(req.params.id);
+
+    // Recalculate goals after deleting backtest
+    await recalculateGoals(userId, masterCardId);
 
     res.json({ message: 'Backtest deleted successfully' });
   } catch (error) {

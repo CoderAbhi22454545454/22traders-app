@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
-  FunnelIcon, 
   ChartBarIcon,
   TagIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
-  XMarkIcon
+  XMarkIcon,
+  ArrowLeftIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon
 } from '@heroicons/react/24/outline';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
@@ -138,12 +139,17 @@ const BacktestPatterns = ({ userId }) => {
                     </div>
                   </div>
                 </div>
-                <div className="ml-4">
+                <div className="ml-4 flex flex-col items-end">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                     item.totalPnL >= 0 
                       ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
                   }`}>
+                    {item.totalPnL >= 0 ? (
+                      <ArrowTrendingUpIcon className="h-3 w-3 mr-1" />
+                    ) : (
+                      <ArrowTrendingDownIcon className="h-3 w-3 mr-1" />
+                    )}
                     {item.totalPnL >= 0 ? 'Profitable' : 'Loss'}
                   </span>
                 </div>
@@ -171,6 +177,13 @@ const BacktestPatterns = ({ userId }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
+          <Link
+            to="/backtests"
+            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4"
+          >
+            <ArrowLeftIcon className="h-4 w-4 mr-1" />
+            Back to Backtests
+          </Link>
           <h1 className="text-3xl font-bold text-gray-900">Pattern Analysis</h1>
           <p className="mt-2 text-gray-600">Identify profitable patterns and strategies from your backtests</p>
         </div>

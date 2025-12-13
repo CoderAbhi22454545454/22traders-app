@@ -5,9 +5,13 @@ import Analytics from './components/Analytics';
 import Trades from './components/Trades';
 import TradeDetail from './components/TradeDetail';
 import Backtests from './components/Backtests';
+import MasterCards from './components/MasterCards';
+import MasterCardDetail from './components/MasterCardDetail';
 import NewBacktest from './components/NewBacktest';
 import BacktestDetail from './components/BacktestDetail';
 import BacktestPatterns from './components/BacktestPatterns';
+import EditBacktest from './components/EditBacktest';
+import MasterCardAnalytics from './components/MasterCardAnalytics';
 import Journal from './components/Journal';
 import JournalEntry from './components/JournalEntry';
 import Login from './components/Login';
@@ -289,11 +293,35 @@ function App() {
               />
               <Route 
                 path="/backtests" 
+                element={<MasterCards userId={user.id} />} 
+              />
+              <Route 
+                path="/backtests/all" 
                 element={<Backtests userId={user.id} />} 
+              />
+              <Route 
+                path="/backtests/analytics" 
+                element={<Backtests userId={user.id} />} 
+              />
+              <Route 
+                path="/backtests/master/:id/analytics" 
+                element={<MasterCardAnalytics userId={user.id} />} 
+              />
+              <Route 
+                path="/backtests/master/:id" 
+                element={<MasterCardDetail userId={user.id} />} 
               />
               <Route 
                 path="/backtests/new" 
                 element={<NewBacktest userId={user.id} />} 
+              />
+              <Route 
+                path="/backtests/patterns" 
+                element={<BacktestPatterns userId={user.id} />} 
+              />
+              <Route 
+                path="/backtests/:id/edit" 
+                element={<EditBacktest userId={user.id} />} 
               />
               <Route 
                 path="/backtests/:id" 

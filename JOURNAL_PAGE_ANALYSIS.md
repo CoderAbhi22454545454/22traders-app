@@ -396,3 +396,4 @@ The Journal page has a solid foundation but needs:
 
 The backend already supports many features that aren't exposed in the UI, so there's low-hanging fruit for quick wins.
 
+

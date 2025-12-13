@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   PencilIcon, 
   TrashIcon, 
   PhotoIcon,
   TagIcon,
-  CalendarIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
   ChartBarIcon,
-  XMarkIcon
+  XMarkIcon,
+  ArrowLeftIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
+  DocumentDuplicateIcon
 } from '@heroicons/react/24/outline';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
@@ -56,6 +57,29 @@ const BacktestDetail = ({ userId }) => {
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  const handleClone = () => {
+    // Store the backtest data in sessionStorage to pre-fill the form
+    const cloneData = {
+      ...backtest,
+      // Clear fields that shouldn't be copied
+      _id: undefined,
+      date: new Date().toISOString().split('T')[0],
+      tradeNumber: '',
+      entryPrice: '',
+      exitPrice: '',
+      stopLoss: '',
+      takeProfit: '',
+      pnl: '',
+      result: '',
+      screenshots: [], // Don't copy screenshots
+      createdAt: undefined,
+      updatedAt: undefined
+    };
+    
+    sessionStorage.setItem('cloneBacktest', JSON.stringify(cloneData));
+    navigate(`/backtests/new${backtest.masterCardId ? `?masterCardId=${backtest.masterCardId}` : ''}`);
   };
 
   const deleteScreenshot = async (screenshotId) => {
@@ -123,23 +147,59 @@ const BacktestDetail = ({ userId }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
         <div className="mb-6">
+          {/* Back Navigation */}
+          <Link
+            to="/backtests"
+            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4"
+          >
+            <ArrowLeftIcon className="h-4 w-4 mr-1" />
+            Back to Backtests
+          </Link>
+          
           <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {backtest.tradeNumber || `Backtest #${backtest._id.slice(-6)}`}
-              </h1>
-              <p className="mt-2 text-gray-600">
-                {backtest.instrument || backtest.tradePair} • {new Date(backtest.date).toLocaleDateString()}
-              </p>
+            <div className="flex items-center space-x-4">
+              {/* Result Indicator */}
+              <div className={`p-3 rounded-xl ${
+                backtest.result === 'win' ? 'bg-green-100' : 
+                backtest.result === 'loss' ? 'bg-red-100' : 'bg-yellow-100'
+              }`}>
+                {backtest.result === 'win' ? (
+                  <ArrowTrendingUpIcon className="h-8 w-8 text-green-600" />
+                ) : backtest.result === 'loss' ? (
+                  <ArrowTrendingDownIcon className="h-8 w-8 text-red-600" />
+                ) : (
+                  <ChartBarIcon className="h-8 w-8 text-yellow-600" />
+                )}
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {backtest.tradeNumber || `Backtest #${backtest._id.slice(-6)}`}
+                </h1>
+                <p className="mt-1 text-gray-600">
+                  {backtest.instrument || backtest.tradePair} • {new Date(backtest.date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+              </div>
             </div>
             <div className="flex space-x-3">
               <button
-                onClick={() => setIsEditing(true)}
+                onClick={handleClone}
+                className="inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50"
+              >
+                <DocumentDuplicateIcon className="h-4 w-4 mr-2" />
+                Clone
+              </button>
+              <Link
+                to={`/backtests/${backtest._id}/edit`}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 <PencilIcon className="h-4 w-4 mr-2" />
                 Edit
-              </button>
+              </Link>
               <button
                 onClick={handleDelete}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
