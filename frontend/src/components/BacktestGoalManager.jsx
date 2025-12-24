@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   PlusIcon,
   PencilIcon,
@@ -40,50 +40,8 @@ const BacktestGoalManager = ({ userId, masterCardId = null, onGoalUpdate }) => {
   });
   const [milestoneInput, setMilestoneInput] = useState({ target: '', label: '' });
 
-  useEffect(() => {
-    if (userId) {
-      fetchGoals();
-    }
-  }, [userId, masterCardId]);
-
-  // Refresh goals when page becomes visible or when backtests are updated
-  useEffect(() => {
-    let refreshTimeout = null;
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden && userId) {
-        // Clear any pending refresh
-        if (refreshTimeout) clearTimeout(refreshTimeout);
-        // Debounce refresh to avoid multiple calls
-        refreshTimeout = setTimeout(() => {
-          fetchGoals();
-        }, 300);
-      }
-    };
-
-    // Listen for custom event when backtests are updated
-    const handleBacktestsUpdated = () => {
-      if (userId) {
-        // Clear any pending refresh
-        if (refreshTimeout) clearTimeout(refreshTimeout);
-        // Small delay to ensure backend has finished processing
-        refreshTimeout = setTimeout(() => {
-          fetchGoals();
-        }, 500);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('backtestsUpdated', handleBacktestsUpdated);
-    
-    return () => {
-      if (refreshTimeout) clearTimeout(refreshTimeout);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('backtestsUpdated', handleBacktestsUpdated);
-    };
-  }, [userId]);
-
-  const fetchGoals = async () => {
+  // Memoize fetchGoals to prevent unnecessary re-renders
+  const fetchGoals = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({ userId });
@@ -108,7 +66,74 @@ const BacktestGoalManager = ({ userId, masterCardId = null, onGoalUpdate }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, masterCardId]);
+
+  // Track if component has mounted to prevent double fetch on initial load
+  const hasMountedRef = useRef(false);
+  const refreshTimeoutRef = useRef(null);
+
+  // Initial fetch and when userId/masterCardId changes
+  useEffect(() => {
+    if (userId) {
+      if (!hasMountedRef.current) {
+        // First mount - fetch immediately
+        hasMountedRef.current = true;
+        fetchGoals();
+      } else {
+        // Subsequent changes - debounce to avoid rapid refetches
+        if (refreshTimeoutRef.current) {
+          clearTimeout(refreshTimeoutRef.current);
+        }
+        refreshTimeoutRef.current = setTimeout(() => {
+          fetchGoals();
+        }, 300);
+      }
+    }
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, [userId, masterCardId, fetchGoals]);
+
+  // Refresh goals when page becomes visible or when backtests are updated
+  useEffect(() => {
+    // Only set up listeners after initial mount to prevent double fetch
+    if (!hasMountedRef.current) return;
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden && userId) {
+        // Clear any pending refresh
+        if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+        // Debounce refresh to avoid multiple calls
+        refreshTimeoutRef.current = setTimeout(() => {
+          fetchGoals();
+        }, 500);
+      }
+    };
+
+    // Listen for custom event when backtests are updated
+    const handleBacktestsUpdated = () => {
+      if (userId) {
+        // Clear any pending refresh
+        if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+        // Small delay to ensure backend has finished processing
+        refreshTimeoutRef.current = setTimeout(() => {
+          fetchGoals();
+        }, 500);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('backtestsUpdated', handleBacktestsUpdated);
+    
+    return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('backtestsUpdated', handleBacktestsUpdated);
+    };
+  }, [userId, fetchGoals]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
