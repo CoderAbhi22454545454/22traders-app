@@ -14,6 +14,7 @@ import {
   XMarkIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
+import CustomCheckbox from './CustomCheckbox';
 
 const TradeChecklistExecutor = ({ 
   userId, 
@@ -444,14 +445,28 @@ const ChecklistItemInput = ({ item, response, onChange }) => {
       case 'text':
         return (
           <div className="space-y-3">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={response.isCompleted}
-                onChange={(e) => handleInputChange('isCompleted', e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="ml-3 text-gray-700">Completed</span>
+            <label 
+              className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                response.isCompleted 
+                  ? 'border-green-500 bg-green-50 shadow-sm ring-2 ring-green-200' 
+                  : 'border-gray-300 hover:bg-blue-50 hover:border-blue-400'
+              }`}
+              onClick={() => handleInputChange('isCompleted', !response.isCompleted)}
+            >
+              <div className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${
+                response.isCompleted 
+                  ? 'bg-green-500 border-green-500' 
+                  : 'border-gray-400 bg-white'
+              }`}>
+                {response.isCompleted && (
+                  <CheckIcon className="w-4 h-4 text-white font-bold" />
+                )}
+              </div>
+              <span className={`ml-3 font-medium ${
+                response.isCompleted ? 'text-green-700' : 'text-gray-700'
+              }`}>
+                {response.isCompleted ? '✓ Completed' : 'Mark as completed'}
+              </span>
             </label>
             <textarea
               value={response.notes || ''}
@@ -466,14 +481,28 @@ const ChecklistItemInput = ({ item, response, onChange }) => {
       case 'number':
         return (
           <div className="space-y-3">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={response.isCompleted}
-                onChange={(e) => handleInputChange('isCompleted', e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="ml-3 text-gray-700">Completed</span>
+            <label 
+              className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                response.isCompleted 
+                  ? 'border-green-500 bg-green-50 shadow-sm ring-2 ring-green-200' 
+                  : 'border-gray-300 hover:bg-blue-50 hover:border-blue-400'
+              }`}
+              onClick={() => handleInputChange('isCompleted', !response.isCompleted)}
+            >
+              <div className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${
+                response.isCompleted 
+                  ? 'bg-green-500 border-green-500' 
+                  : 'border-gray-400 bg-white'
+              }`}>
+                {response.isCompleted && (
+                  <CheckIcon className="w-4 h-4 text-white font-bold" />
+                )}
+              </div>
+              <span className={`ml-3 font-medium ${
+                response.isCompleted ? 'text-green-700' : 'text-gray-700'
+              }`}>
+                {response.isCompleted ? '✓ Completed' : 'Mark as completed'}
+              </span>
             </label>
             <input
               type="number"
@@ -496,55 +525,38 @@ const ChecklistItemInput = ({ item, response, onChange }) => {
       case 'radio':
         return (
           <div className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Select your answer:</h4>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h4 className="text-sm font-medium text-gray-900 mb-4">Select your answer:</h4>
               <div className="space-y-3">
-                <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
-                  response.value === 'Yes' 
-                    ? 'border-green-500 bg-green-50 shadow-sm ring-1 ring-green-200' 
-                    : 'border-gray-200 hover:bg-green-50 hover:border-green-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name={`option-${item._id}`}
-                    value="Yes"
-                    checked={response.value === 'Yes'}
-                    onChange={(e) => {
-                      handleInputChange('value', e.target.value);
-                      handleInputChange('isCompleted', true);
-                    }}
-                    className="border-gray-300 text-green-600 focus:ring-green-500 w-4 h-4"
-                  />
-                  <span className={`ml-3 font-medium transition-colors ${
-                    response.value === 'Yes' ? 'text-green-700' : 'text-gray-900'
-                  }`}>Yes</span>
-                  {response.value === 'Yes' && (
-                    <CheckIcon className="w-4 h-4 text-green-600 ml-auto" />
-                  )}
-                </label>
-                <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
-                  response.value === 'No' 
-                    ? 'border-red-500 bg-red-50 shadow-sm ring-1 ring-red-200' 
-                    : 'border-gray-200 hover:bg-red-50 hover:border-red-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name={`option-${item._id}`}
-                    value="No"
-                    checked={response.value === 'No'}
-                    onChange={(e) => {
-                      handleInputChange('value', e.target.value);
-                      handleInputChange('isCompleted', true);
-                    }}
-                    className="border-gray-300 text-red-600 focus:ring-red-500 w-4 h-4"
-                  />
-                  <span className={`ml-3 font-medium transition-colors ${
-                    response.value === 'No' ? 'text-red-700' : 'text-gray-900'
-                  }`}>No</span>
-                  {response.value === 'No' && (
-                    <XMarkIcon className="w-4 h-4 text-red-600 ml-auto" />
-                  )}
-                </label>
+                {/* YES Option - Using CustomCheckbox */}
+                <CustomCheckbox
+                  checked={response.value === 'Yes'}
+                  onChange={() => {
+                    // Toggle: if Yes is already selected, deselect; otherwise select Yes
+                    const newValue = response.value === 'Yes' ? null : 'Yes';
+                    onChange({
+                      ...response,
+                      value: newValue,
+                      isCompleted: newValue !== null
+                    });
+                  }}
+                  label="Yes"
+                />
+
+                {/* NO Option - Using CustomCheckbox */}
+                <CustomCheckbox
+                  checked={response.value === 'No'}
+                  onChange={() => {
+                    // Toggle: if No is already selected, deselect; otherwise select No
+                    const newValue = response.value === 'No' ? null : 'No';
+                    onChange({
+                      ...response,
+                      value: newValue,
+                      isCompleted: newValue !== null
+                    });
+                  }}
+                  label="No"
+                />
               </div>
             </div>
             <textarea
@@ -560,15 +572,27 @@ const ChecklistItemInput = ({ item, response, onChange }) => {
       default:
         return (
           <div className="space-y-3">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={response.isCompleted}
-                onChange={(e) => handleInputChange('isCompleted', e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="ml-3 text-gray-700">
-                {response.isCompleted ? 'Completed' : 'Mark as completed'}
+            <label 
+              className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                response.isCompleted 
+                  ? 'border-green-500 bg-green-50 shadow-sm ring-2 ring-green-200' 
+                  : 'border-gray-300 hover:bg-blue-50 hover:border-blue-400'
+              }`}
+              onClick={() => handleInputChange('isCompleted', !response.isCompleted)}
+            >
+              <div className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${
+                response.isCompleted 
+                  ? 'bg-green-500 border-green-500' 
+                  : 'border-gray-400 bg-white'
+              }`}>
+                {response.isCompleted && (
+                  <CheckIcon className="w-4 h-4 text-white font-bold" />
+                )}
+              </div>
+              <span className={`ml-3 font-medium ${
+                response.isCompleted ? 'text-green-700' : 'text-gray-700'
+              }`}>
+                {response.isCompleted ? '✓ Completed' : 'Mark as completed'}
               </span>
             </label>
           </div>

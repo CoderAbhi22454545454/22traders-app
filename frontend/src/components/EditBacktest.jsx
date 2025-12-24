@@ -7,6 +7,7 @@ import {
   TagIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
+import ScreenshotManager from './ScreenshotManager';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
@@ -57,14 +58,9 @@ const EditBacktest = ({ userId }) => {
   });
   const [existingChips, setExistingChips] = useState([]);
 
-  // Screenshots state - existing screenshots and new ones
-  const [existingScreenshots, setExistingScreenshots] = useState([]);
+  // Screenshots state - array of all screenshots (existing + new)
+  const [screenshots, setScreenshots] = useState([]);
   const [screenshotsToRemove, setScreenshotsToRemove] = useState([]);
-  const [newScreenshots, setNewScreenshots] = useState({
-    before: { file: null, description: '' },
-    entry: { file: null, description: '' },
-    after: { file: null, description: '' }
-  });
 
   // Fetch backtest data and master cards
   useEffect(() => {
@@ -116,9 +112,19 @@ const EditBacktest = ({ userId }) => {
           })));
         }
 
-        // Set existing screenshots
+        // Set existing screenshots - convert to format expected by ScreenshotManager
         if (backtest.screenshots && backtest.screenshots.length > 0) {
-          setExistingScreenshots(backtest.screenshots);
+          const formattedScreenshots = backtest.screenshots.map(screenshot => ({
+            id: screenshot._id,
+            imageUrl: screenshot.imageUrl || screenshot.url, // Handle both old and new format
+            publicId: screenshot.publicId,
+            label: screenshot.label || screenshot.type || '', // Fallback to type if label doesn't exist
+            description: screenshot.description || '',
+            borderColor: screenshot.borderColor || '#3B82F6',
+            isNew: false,
+            isExisting: true
+          }));
+          setScreenshots(formattedScreenshots);
         }
 
         // Fetch master cards
@@ -171,31 +177,20 @@ const EditBacktest = ({ userId }) => {
     }
   };
 
-  // Screenshot management
-  const handleNewScreenshotChange = (type, file) => {
-    setNewScreenshots(prev => ({
-      ...prev,
-      [type]: { ...prev[type], file }
-    }));
-  };
+  // Screenshot management - removed old handlers, using unified handler below
 
-  const handleNewScreenshotDescriptionChange = (type, description) => {
-    setNewScreenshots(prev => ({
-      ...prev,
-      [type]: { ...prev[type], description }
-    }));
-  };
-
-  const removeNewScreenshot = (type) => {
-    setNewScreenshots(prev => ({
-      ...prev,
-      [type]: { file: null, description: '' }
-    }));
-  };
-
-  const removeExistingScreenshot = (screenshotId) => {
-    setScreenshotsToRemove(prev => [...prev, screenshotId]);
-    setExistingScreenshots(prev => prev.filter(s => s._id !== screenshotId));
+  // Handle screenshot changes - unified handler for add/update/remove
+  const handleScreenshotsChange = (newScreenshots) => {
+    // Track which existing screenshots were removed
+    const existingIds = screenshots.filter(s => s.isExisting).map(s => s.id);
+    const newIds = newScreenshots.filter(s => s.isExisting).map(s => s.id);
+    const removed = existingIds.filter(id => !newIds.includes(id));
+    
+    if (removed.length > 0) {
+      setScreenshotsToRemove(prev => [...new Set([...prev, ...removed])]);
+    }
+    
+    setScreenshots(newScreenshots);
   };
 
   const handleSubmit = async (e) => {
@@ -220,21 +215,35 @@ const EditBacktest = ({ userId }) => {
         formDataToSend.append('removeScreenshots', JSON.stringify(screenshotsToRemove));
       }
 
-      // Add new screenshots and their metadata
-      const screenshotTypes = [];
-      const screenshotDescriptions = [];
+      // Handle updates to existing screenshots (label, description, borderColor)
+      const existingScreenshotsUpdates = screenshots
+        .filter(s => s.isExisting && !screenshotsToRemove.includes(s.id))
+        .map(s => ({
+          id: s.id,
+          label: s.label,
+          description: s.description,
+          borderColor: s.borderColor
+        }));
       
-      Object.keys(newScreenshots).forEach(type => {
-        if (newScreenshots[type].file) {
-          formDataToSend.append('screenshots', newScreenshots[type].file);
-          screenshotTypes.push(type);
-          screenshotDescriptions.push(newScreenshots[type].description);
-        }
+      if (existingScreenshotsUpdates.length > 0) {
+        formDataToSend.append('updateScreenshots', JSON.stringify(existingScreenshotsUpdates));
+      }
+
+      // Add new screenshots and their metadata
+      const newScreenshotMetadata = [];
+      const newScreenshotFiles = screenshots.filter(s => s.isNew && s.file);
+      
+      newScreenshotFiles.forEach(screenshot => {
+        formDataToSend.append('screenshots', screenshot.file);
+        newScreenshotMetadata.push({
+          label: screenshot.label || '',
+          description: screenshot.description || '',
+          borderColor: screenshot.borderColor || '#3B82F6'
+        });
       });
 
-      if (screenshotTypes.length > 0) {
-        formDataToSend.append('screenshotTypes', JSON.stringify(screenshotTypes));
-        formDataToSend.append('screenshotDescriptions', JSON.stringify(screenshotDescriptions));
+      if (newScreenshotMetadata.length > 0) {
+        formDataToSend.append('screenshotMetadata', JSON.stringify(newScreenshotMetadata));
       }
 
       const response = await fetch(`${API_BASE_URL}/backtests/${id}`, {
@@ -672,104 +681,21 @@ const EditBacktest = ({ userId }) => {
             )}
           </div>
 
-          {/* Screenshots - Show existing and allow adding new */}
+          {/* Screenshots - Save One at a Time */}
           <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Screenshots</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <PhotoIcon className="h-6 w-6 text-blue-600" />
+              Trade Screenshots
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Edit existing screenshots or add new ones. Each screenshot is saved as a card. (Max 10 total)
+            </p>
             
-            {/* Existing Screenshots */}
-            {existingScreenshots.length > 0 && (
-              <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Existing Screenshots</h4>
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                  {existingScreenshots.map((screenshot) => (
-                    <div key={screenshot._id} className="space-y-2">
-                      <div className="relative">
-                        <img
-                          src={screenshot.url}
-                          alt={`${screenshot.type} screenshot`}
-                          className="w-full h-32 object-cover rounded-md"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeExistingScreenshot(screenshot._id)}
-                          className="absolute top-2 right-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-600 text-white hover:bg-red-700"
-                        >
-                          <XMarkIcon className="w-4 h-4" />
-                        </button>
-                        <div className="absolute top-2 left-2">
-                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-black bg-opacity-75 text-white">
-                            {screenshot.type.charAt(0).toUpperCase() + screenshot.type.slice(1)}
-                          </span>
-                        </div>
-                      </div>
-                      {screenshot.description && (
-                        <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded-md">
-                          {screenshot.description}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* New Screenshots */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Add New Screenshots</h4>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                {['before', 'entry', 'after'].map(type => (
-                  <div key={type} className="border border-gray-200 rounded-lg p-4">
-                    <h5 className="text-sm font-medium text-gray-700 mb-3 capitalize">
-                      {type === 'before' ? 'Before Trade' : type === 'entry' ? 'Trade Entry' : 'After Trade'}
-                    </h5>
-                    
-                    {newScreenshots[type].file ? (
-                      <div className="space-y-3">
-                        <div className="relative">
-                          <img
-                            src={URL.createObjectURL(newScreenshots[type].file)}
-                            alt={`${type} screenshot`}
-                            className="w-full h-32 object-cover rounded-md"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeNewScreenshot(type)}
-                            className="absolute top-2 right-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-600 text-white hover:bg-red-700"
-                          >
-                            <XMarkIcon className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <textarea
-                          placeholder={`Describe the ${type} screenshot...`}
-                          value={newScreenshots[type].description}
-                          onChange={(e) => handleNewScreenshotDescriptionChange(type, e.target.value)}
-                          rows={3}
-                          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 text-sm placeholder-gray-400 resize-none"
-                        />
-                      </div>
-                    ) : (
-                      <div>
-                        <label className="cursor-pointer">
-                          <div className="border-2 border-gray-300 border-dashed rounded-lg p-6 text-center hover:border-gray-400">
-                            <PhotoIcon className="mx-auto h-8 w-8 text-gray-400" />
-                            <span className="mt-2 block text-sm font-medium text-gray-600">
-                              Upload {type} screenshot
-                            </span>
-                            <span className="block text-xs text-gray-500">PNG, JPG, GIF up to 10MB</span>
-                          </div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleNewScreenshotChange(type, e.target.files[0])}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ScreenshotManager
+              screenshots={screenshots}
+              onScreenshotsChange={handleScreenshotsChange}
+              maxScreenshots={10}
+            />
           </div>
 
           {/* Analysis - Same as NewBacktest */}
@@ -881,6 +807,9 @@ const EditBacktest = ({ userId }) => {
 };
 
 export default EditBacktest;
+
+
+
 
 
 

@@ -591,7 +591,6 @@ const Trades = ({ userId }) => {
           <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
             {trade.executionScore ? (
               <>
-                <StarIcon className="h-5 w-5 text-yellow-600" />
                 <div>
                   <div className="text-xs text-gray-500">Execution</div>
                   <div className="text-sm font-semibold text-gray-900">
@@ -601,7 +600,6 @@ const Trades = ({ userId }) => {
               </>
             ) : trade.entryPrice ? (
               <>
-                <BanknotesIcon className="h-5 w-5 text-blue-600" />
                 <div>
                   <div className="text-xs text-gray-500">Entry Price</div>
                   <div className="text-sm font-semibold text-gray-900">
@@ -683,7 +681,86 @@ const Trades = ({ userId }) => {
           </div>
         )}
 
-        {trade.screenshotUrl && (
+        {/* Trade Screenshots (multiple or single) */}
+        {(trade.screenshots && trade.screenshots.length > 0) ? (
+          <div className="mb-4">
+            <div className="grid grid-cols-2 gap-2">
+              {trade.screenshots.slice(0, 4).map((screenshot, idx) => (
+                <div 
+                  key={screenshot._id || idx}
+                  className="relative group cursor-pointer"
+                  onClick={() => {
+                    // Open fullscreen view with all screenshots
+                    const modal = document.createElement('div');
+                    modal.className = 'fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 p-8';
+                    modal.onclick = () => modal.remove();
+                    
+                    const container = document.createElement('div');
+                    container.className = 'max-w-7xl w-full';
+                    container.onclick = (e) => e.stopPropagation();
+                    
+                    const img = document.createElement('img');
+                    img.src = screenshot.imageUrl || screenshot.url;
+                    img.className = 'w-full h-auto max-h-[70vh] object-contain rounded-lg shadow-2xl mb-4';
+                    img.style.borderBottom = `4px solid ${screenshot.borderColor || '#3B82F6'}`;
+                    
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'bg-white rounded-lg p-4 mt-4';
+                    
+                    if (screenshot.label) {
+                      const labelEl = document.createElement('h3');
+                      labelEl.className = 'text-xl font-bold text-gray-900 mb-2';
+                      labelEl.textContent = screenshot.label;
+                      infoDiv.appendChild(labelEl);
+                    }
+                    
+                    if (screenshot.description) {
+                      const descEl = document.createElement('p');
+                      descEl.className = 'text-gray-700 whitespace-pre-wrap';
+                      descEl.textContent = screenshot.description;
+                      infoDiv.appendChild(descEl);
+                    }
+                    
+                    const closeButton = document.createElement('button');
+                    closeButton.innerHTML = '✕';
+                    closeButton.className = 'absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center';
+                    closeButton.onclick = () => modal.remove();
+                    
+                    container.appendChild(img);
+                    if (screenshot.label || screenshot.description) {
+                      container.appendChild(infoDiv);
+                    }
+                    modal.appendChild(container);
+                    modal.appendChild(closeButton);
+                    document.body.appendChild(modal);
+                  }}
+                >
+                  <img
+                    src={screenshot.imageUrl || screenshot.url}
+                    alt={screenshot.label || 'Trade screenshot'}
+                    className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 group-hover:border-blue-400 transition-all"
+                    style={{ borderBottomWidth: '3px', borderBottomColor: screenshot.borderColor || '#3B82F6' }}
+                  />
+                  {screenshot.label && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded-b-lg truncate">
+                      {screenshot.label}
+                    </div>
+                  )}
+                  {idx === 3 && trade.screenshots.length > 4 && (
+                    <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center rounded-lg">
+                      <span className="text-white font-bold text-lg">+{trade.screenshots.length - 4}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {trade.screenshots.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1 text-center">
+                {trade.screenshots.length} screenshot{trade.screenshots.length > 1 ? 's' : ''} • Click to view
+              </p>
+            )}
+          </div>
+        ) : trade.screenshotUrl && (
           <div className="mb-4">
             <img
               src={trade.screenshotUrl}
@@ -1106,42 +1183,133 @@ const Trades = ({ userId }) => {
               </div>
             )}
 
-            {/* Screenshot Section */}
-            {currentTrade.screenshotUrl && (
+            {/* Screenshots Section */}
+            {((currentTrade.screenshots && currentTrade.screenshots.length > 0) || currentTrade.screenshotUrl) && (
               <div className="mb-5 border-t border-gray-200 pt-5">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
                   <EyeIcon className="h-4 w-4 mr-2 text-gray-600" />
-                  Trade Chart & Screenshot
+                  Trade Screenshots
+                  {currentTrade.screenshots && currentTrade.screenshots.length > 0 && (
+                    <span className="ml-2 text-sm text-gray-500">({currentTrade.screenshots.length})</span>
+                  )}
                 </h3>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
-                  <img
-                    src={currentTrade.screenshotUrl}
-                    alt="Trade screenshot"
-                    className="w-full max-h-60 object-contain rounded-lg cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                    onClick={() => {
-                      // Open fullscreen view
-                      const modal = document.createElement('div');
-                      modal.className = 'fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 backdrop-blur-sm';
-                      modal.onclick = () => modal.remove();
-                      
-                      const img = document.createElement('img');
-                      img.src = currentTrade.screenshotUrl;
-                      img.className = 'max-w-[95vw] max-h-[95vh] object-contain rounded-lg shadow-2xl';
-                      
-                      const closeButton = document.createElement('button');
-                      closeButton.innerHTML = '×';
-                      closeButton.className = 'absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition-colors';
-                      closeButton.onclick = () => modal.remove();
-                      
-                      modal.appendChild(img);
-                      modal.appendChild(closeButton);
-                      document.body.appendChild(modal);
-                    }}
-                  />
-                  <div className="mt-3 text-center text-xs text-gray-500">
-                    Click to view in fullscreen
+                
+                {/* Multiple Screenshots (New Format) */}
+                {currentTrade.screenshots && currentTrade.screenshots.length > 0 ? (
+                  <div className="space-y-4">
+                    {currentTrade.screenshots.map((screenshot, idx) => (
+                      <div 
+                        key={screenshot._id || idx}
+                        className="border-2 rounded-lg overflow-hidden hover:shadow-lg transition-all"
+                        style={{ borderBottomWidth: '4px', borderBottomColor: screenshot.borderColor || '#3B82F6' }}
+                      >
+                        {/* Screenshot Label */}
+                        {screenshot.label && (
+                          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-2 border-b">
+                            <h4 className="text-sm font-bold text-gray-900">{screenshot.label}</h4>
+                          </div>
+                        )}
+                        
+                        {/* Screenshot Image */}
+                        <div 
+                          className="bg-gray-50 p-4 cursor-pointer group"
+                          onClick={() => {
+                            // Open fullscreen view
+                            const modal = document.createElement('div');
+                            modal.className = 'fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 p-8';
+                            modal.onclick = () => modal.remove();
+                            
+                            const container = document.createElement('div');
+                            container.className = 'max-w-7xl w-full';
+                            container.onclick = (e) => e.stopPropagation();
+                            
+                            const img = document.createElement('img');
+                            img.src = screenshot.imageUrl || screenshot.url;
+                            img.className = 'w-full h-auto max-h-[70vh] object-contain rounded-lg shadow-2xl mb-4';
+                            img.style.borderBottom = `4px solid ${screenshot.borderColor || '#3B82F6'}`;
+                            
+                            const infoDiv = document.createElement('div');
+                            infoDiv.className = 'bg-white rounded-lg p-4 mt-4';
+                            
+                            if (screenshot.label) {
+                              const labelEl = document.createElement('h3');
+                              labelEl.className = 'text-xl font-bold text-gray-900 mb-2';
+                              labelEl.textContent = screenshot.label;
+                              infoDiv.appendChild(labelEl);
+                            }
+                            
+                            if (screenshot.description) {
+                              const descEl = document.createElement('p');
+                              descEl.className = 'text-gray-700 whitespace-pre-wrap';
+                              descEl.textContent = screenshot.description;
+                              infoDiv.appendChild(descEl);
+                            }
+                            
+                            const closeButton = document.createElement('button');
+                            closeButton.innerHTML = '✕';
+                            closeButton.className = 'absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center';
+                            closeButton.onclick = () => modal.remove();
+                            
+                            container.appendChild(img);
+                            if (screenshot.label || screenshot.description) {
+                              container.appendChild(infoDiv);
+                            }
+                            modal.appendChild(container);
+                            modal.appendChild(closeButton);
+                            document.body.appendChild(modal);
+                          }}
+                        >
+                          <img
+                            src={screenshot.imageUrl || screenshot.url}
+                            alt={screenshot.label || 'Trade screenshot'}
+                            className="w-full max-h-60 object-contain rounded-lg hover:shadow-xl transition-all duration-300 transform group-hover:scale-105"
+                          />
+                        </div>
+                        
+                        {/* Screenshot Description */}
+                        {screenshot.description && (
+                          <div className="bg-gray-50 px-4 py-3 border-t">
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{screenshot.description}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <div className="text-center text-xs text-gray-500">
+                      Click any screenshot to view in fullscreen
+                    </div>
                   </div>
-                </div>
+                ) : currentTrade.screenshotUrl && (
+                  // Fallback for old format (single screenshot)
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <img
+                      src={currentTrade.screenshotUrl}
+                      alt="Trade screenshot"
+                      className="w-full max-h-60 object-contain rounded-lg cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                      onClick={() => {
+                        // Open fullscreen view
+                        const modal = document.createElement('div');
+                        modal.className = 'fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 backdrop-blur-sm';
+                        modal.onclick = () => modal.remove();
+                        
+                        const img = document.createElement('img');
+                        img.src = currentTrade.screenshotUrl;
+                        img.className = 'max-w-[95vw] max-h-[95vh] object-contain rounded-lg shadow-2xl';
+                        
+                        const closeButton = document.createElement('button');
+                        closeButton.innerHTML = '×';
+                        closeButton.className = 'absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition-colors';
+                        closeButton.onclick = () => modal.remove();
+                        
+                        modal.appendChild(img);
+                        modal.appendChild(closeButton);
+                        document.body.appendChild(modal);
+                      }}
+                    />
+                    <div className="mt-3 text-center text-xs text-gray-500">
+                      Click to view in fullscreen
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

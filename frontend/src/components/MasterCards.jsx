@@ -321,7 +321,8 @@ const MasterCards = ({ userId }) => {
             {masterCards.map((card) => (
               <div
                 key={card._id}
-                className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow border-l-4"
+                onClick={() => navigate(`/backtests/master/${card._id}`)}
+                className="bg-white rounded-lg shadow hover:shadow-xl transition-all duration-200 border-l-4 cursor-pointer transform hover:-translate-y-1"
                 style={{ borderLeftColor: card.color || '#3B82F6' }}
               >
                 <div className="p-6">
@@ -334,16 +335,22 @@ const MasterCards = ({ userId }) => {
                     </div>
                     <div className="flex gap-2 ml-4">
                       <button
-                        onClick={() => openEditModal(card)}
-                        className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-                        title="Edit"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditModal(card);
+                        }}
+                        className="p-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow"
+                        title="Edit Master Card"
                       >
                         <PencilIcon className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(card._id)}
-                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                        title="Delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(card._id);
+                        }}
+                        className="p-2.5 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow"
+                        title="Delete Master Card"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
@@ -392,21 +399,24 @@ const MasterCards = ({ userId }) => {
                   )}
 
                   {/* Actions */}
-                  <div className="flex gap-2 mt-4">
-                    <Link
-                      to={`/backtests/master/${card._id}`}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                    >
-                      View Trades
-                      <ArrowRightIcon className="h-4 w-4" />
-                    </Link>
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
                     <Link
                       to={`/backtests/master/${card._id}/analytics`}
-                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-                      title="Analytics"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-sm hover:shadow-md text-sm font-medium"
+                      title="View Analytics Dashboard"
                     >
                       <ChartBarIcon className="h-4 w-4" />
+                      Analytics
                     </Link>
+                  </div>
+                  
+                  {/* Click anywhere hint */}
+                  <div className="mt-3 text-center">
+                    <span className="text-xs text-gray-400 flex items-center justify-center gap-1">
+                      <ArrowRightIcon className="h-3 w-3" />
+                      Click card to view trades
+                    </span>
                   </div>
                 </div>
               </div>

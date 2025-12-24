@@ -442,3 +442,6 @@ Developed as part of the 22traders-app trading journal application.
 **Features**: Quick Stats, Templates, Clone Functionality
 
 
+
+
+

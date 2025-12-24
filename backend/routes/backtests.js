@@ -41,13 +41,13 @@ const recalculateGoals = async (userId, masterCardId = null) => {
   }
 };
 
-// Configure Multer for multiple file uploads
+// Configure Multer for multiple file uploads (up to 10)
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit per file
-    files: 3 // Maximum 3 files (before, entry, after)
+    files: 10 // Maximum 10 files per trade
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
@@ -255,7 +255,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/backtests - Create new backtest
-router.post('/', upload.array('screenshots', 3), backtestValidation, async (req, res) => {
+router.post('/', upload.array('screenshots', 10), backtestValidation, async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -272,7 +272,7 @@ router.post('/', upload.array('screenshots', 3), backtestValidation, async (req,
       customChips, backtestNotes, patternIdentified,
       marketCondition, confidence, reasonForEntry,
       reasonForExit, whatWorked, whatDidntWork, improvementAreas,
-      screenshotDescriptions, screenshotTypes
+      screenshotMetadata
     } = req.body;
 
     // Parse custom chips if provided as JSON string
@@ -285,25 +285,43 @@ router.post('/', upload.array('screenshots', 3), backtestValidation, async (req,
       }
     }
 
-    // Handle multiple screenshot uploads
+    // Handle multiple screenshot uploads (up to 10)
     const screenshots = [];
     if (req.files && req.files.length > 0) {
+      // Validate max 10 screenshots
+      if (req.files.length > 10) {
+        return res.status(400).json({ message: 'Maximum 10 screenshots allowed per trade' });
+      }
+
       try {
-        const descriptions = screenshotDescriptions ? JSON.parse(screenshotDescriptions) : [];
-        const types = screenshotTypes ? JSON.parse(screenshotTypes) : [];
+        const metadata = screenshotMetadata ? JSON.parse(screenshotMetadata) : [];
+        
+        console.log('📸 Screenshot Metadata Received:', metadata);
+        console.log('📸 Number of files:', req.files.length);
         
         for (let i = 0; i < req.files.length; i++) {
           const file = req.files[i];
           const uploadResult = await uploadToCloudinary(file.buffer, file.originalname, 'backtests');
           
+          const screenshotData = metadata[i] || {};
+          
+          console.log(`📸 Screenshot ${i + 1} Data:`, {
+            label: screenshotData.label,
+            description: screenshotData.description,
+            borderColor: screenshotData.borderColor
+          });
+          
           screenshots.push({
-            type: types[i] || 'entry',
-            url: uploadResult.url,
+            imageUrl: uploadResult.url,
             publicId: uploadResult.publicId,
-            description: descriptions[i] || '',
+            label: screenshotData.label || '',
+            description: screenshotData.description || '',
+            borderColor: screenshotData.borderColor || '#3B82F6',
             metadata: uploadResult.metadata
           });
         }
+        
+        console.log('📸 Final screenshots array:', JSON.stringify(screenshots, null, 2));
       } catch (uploadError) {
         console.error('Screenshot upload error:', uploadError);
         return res.status(500).json({ 
@@ -1347,7 +1365,7 @@ const backtestUpdateValidation = [
 ];
 
 // PUT /api/backtests/:id - Update backtest
-router.put('/:id', upload.array('screenshots', 3), backtestUpdateValidation, async (req, res) => {
+router.put('/:id', upload.array('screenshots', 10), backtestUpdateValidation, async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -1363,8 +1381,8 @@ router.put('/:id', upload.array('screenshots', 3), backtestUpdateValidation, asy
       positionSize, riskReward, customChips, backtestNotes,
       patternIdentified, marketCondition, confidence,
       reasonForEntry, reasonForExit, whatWorked, whatDidntWork,
-      improvementAreas, screenshotDescriptions, screenshotTypes,
-      removeScreenshots
+      improvementAreas, screenshotMetadata,
+      removeScreenshots, updateScreenshots
     } = req.body;
 
     // Parse custom chips if provided
@@ -1383,6 +1401,19 @@ router.put('/:id', upload.array('screenshots', 3), backtestUpdateValidation, asy
       return res.status(404).json({ message: 'Backtest not found' });
     }
 
+    // Migrate old screenshot format to new format (backward compatibility)
+    existingBacktest.screenshots = existingBacktest.screenshots.map(screenshot => {
+      // If screenshot has old format (url instead of imageUrl), migrate it
+      if (screenshot.url && !screenshot.imageUrl) {
+        screenshot.imageUrl = screenshot.url;
+      }
+      // Set default values for new fields if they don't exist
+      if (!screenshot.label) screenshot.label = screenshot.type || '';
+      if (!screenshot.borderColor) screenshot.borderColor = '#3B82F6';
+      if (screenshot.description === undefined) screenshot.description = '';
+      return screenshot;
+    });
+
     // Handle screenshot removal if requested
     if (removeScreenshots) {
       const screenshotsToRemove = JSON.parse(removeScreenshots);
@@ -1399,21 +1430,44 @@ router.put('/:id', upload.array('screenshots', 3), backtestUpdateValidation, asy
       }
     }
 
+    // Handle updates to existing screenshots (label, description, borderColor)
+    if (updateScreenshots) {
+      const screenshotsToUpdate = JSON.parse(updateScreenshots);
+      screenshotsToUpdate.forEach(update => {
+        const screenshot = existingBacktest.screenshots.id(update.id);
+        if (screenshot) {
+          if (update.label !== undefined) screenshot.label = update.label;
+          if (update.description !== undefined) screenshot.description = update.description;
+          if (update.borderColor !== undefined) screenshot.borderColor = update.borderColor;
+        }
+      });
+    }
+
     // Handle new screenshot uploads
     if (req.files && req.files.length > 0) {
+      // Check total screenshot count (existing + new)
+      const totalScreenshots = existingBacktest.screenshots.length + req.files.length;
+      if (totalScreenshots > 10) {
+        return res.status(400).json({ 
+          message: `Cannot add ${req.files.length} screenshots. Maximum 10 screenshots allowed per trade. Currently have ${existingBacktest.screenshots.length}.` 
+        });
+      }
+
       try {
-        const descriptions = screenshotDescriptions ? JSON.parse(screenshotDescriptions) : [];
-        const types = screenshotTypes ? JSON.parse(screenshotTypes) : [];
+        const metadata = screenshotMetadata ? JSON.parse(screenshotMetadata) : [];
         
         for (let i = 0; i < req.files.length; i++) {
           const file = req.files[i];
           const uploadResult = await uploadToCloudinary(file.buffer, file.originalname, 'backtests');
           
+          const screenshotData = metadata[i] || {};
+          
           existingBacktest.screenshots.push({
-            type: types[i] || 'entry',
-            url: uploadResult.url,
+            imageUrl: uploadResult.url,
             publicId: uploadResult.publicId,
-            description: descriptions[i] || '',
+            label: screenshotData.label || '',
+            description: screenshotData.description || '',
+            borderColor: screenshotData.borderColor || '#3B82F6',
             metadata: uploadResult.metadata
           });
         }

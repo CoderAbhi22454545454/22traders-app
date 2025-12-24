@@ -10,6 +10,7 @@ import {
   BookmarkIcon
 } from '@heroicons/react/24/outline';
 import BacktestTemplateManager from './BacktestTemplateManager';
+import ScreenshotManager from './ScreenshotManager';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
@@ -66,12 +67,8 @@ const NewBacktest = ({ userId }) => {
   });
   const [existingChips, setExistingChips] = useState([]);
 
-  // Screenshots state
-  const [screenshots, setScreenshots] = useState({
-    before: { file: null, description: '' },
-    entry: { file: null, description: '' },
-    after: { file: null, description: '' }
-  });
+  // Screenshots state - array of screenshot objects
+  const [screenshots, setScreenshots] = useState([]);
 
   // Fetch master cards and existing chips
   useEffect(() => {
@@ -157,26 +154,9 @@ const NewBacktest = ({ userId }) => {
     }
   };
 
-  // Screenshot management
-  const handleScreenshotChange = (type, file) => {
-    setScreenshots(prev => ({
-      ...prev,
-      [type]: { ...prev[type], file }
-    }));
-  };
-
-  const handleScreenshotDescriptionChange = (type, description) => {
-    setScreenshots(prev => ({
-      ...prev,
-      [type]: { ...prev[type], description }
-    }));
-  };
-
-  const removeScreenshot = (type) => {
-    setScreenshots(prev => ({
-      ...prev,
-      [type]: { file: null, description: '' }
-    }));
+  // Screenshot management - now handled by MultipleScreenshotUploader component
+  const handleScreenshotsChange = (newScreenshots) => {
+    setScreenshots(newScreenshots);
   };
 
   // Handle template selection
@@ -278,21 +258,26 @@ const NewBacktest = ({ userId }) => {
       formDataToSend.append('userId', userId);
       formDataToSend.append('customChips', JSON.stringify(customChips));
 
-      // Add screenshots and their metadata
-      const screenshotTypes = [];
-      const screenshotDescriptions = [];
+      // Add screenshots and their metadata (up to 10)
+      const screenshotMetadata = [];
       
-      Object.keys(screenshots).forEach(type => {
-        if (screenshots[type].file) {
-          formDataToSend.append('screenshots', screenshots[type].file);
-          screenshotTypes.push(type);
-          screenshotDescriptions.push(screenshots[type].description);
+      console.log('📸 Screenshots to upload:', screenshots);
+      
+      screenshots.forEach((screenshot) => {
+        if (screenshot.file) {
+          formDataToSend.append('screenshots', screenshot.file);
+          screenshotMetadata.push({
+            label: screenshot.label || '',
+            description: screenshot.description || '',
+            borderColor: screenshot.borderColor || '#3B82F6'
+          });
         }
       });
 
-      if (screenshotTypes.length > 0) {
-        formDataToSend.append('screenshotTypes', JSON.stringify(screenshotTypes));
-        formDataToSend.append('screenshotDescriptions', JSON.stringify(screenshotDescriptions));
+      console.log('📸 Screenshot Metadata being sent:', screenshotMetadata);
+
+      if (screenshotMetadata.length > 0) {
+        formDataToSend.append('screenshotMetadata', JSON.stringify(screenshotMetadata));
       }
 
       const response = await fetch(`${API_BASE_URL}/backtests`, {
@@ -748,63 +733,21 @@ const NewBacktest = ({ userId }) => {
             )}
           </div>
 
-          {/* Screenshots */}
+          {/* Screenshots - Save One at a Time */}
           <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Screenshots</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <PhotoIcon className="h-6 w-6 text-blue-600" />
+              Trade Screenshots
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Add screenshots one at a time. Each screenshot can have a label, description, and border color.
+            </p>
             
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              {['before', 'entry', 'after'].map(type => (
-                <div key={type} className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3 capitalize">
-                    {type === 'before' ? 'Before Trade' : type === 'entry' ? 'Trade Entry' : 'After Trade'}
-                  </h4>
-                  
-                  {screenshots[type].file ? (
-                    <div className="space-y-3">
-                      <div className="relative">
-                        <img
-                          src={URL.createObjectURL(screenshots[type].file)}
-                          alt={`${type} screenshot`}
-                          className="w-full h-32 object-cover rounded-md"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeScreenshot(type)}
-                          className="absolute top-2 right-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-600 text-white hover:bg-red-700"
-                        >
-                          <XMarkIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <textarea
-                        placeholder={`Describe the ${type} screenshot...`}
-                        value={screenshots[type].description}
-                        onChange={(e) => handleScreenshotDescriptionChange(type, e.target.value)}
-                        rows={3}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 text-sm placeholder-gray-400 resize-none"
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="cursor-pointer">
-                        <div className="border-2 border-gray-300 border-dashed rounded-lg p-6 text-center hover:border-gray-400">
-                          <PhotoIcon className="mx-auto h-8 w-8 text-gray-400" />
-                          <span className="mt-2 block text-sm font-medium text-gray-600">
-                            Upload {type} screenshot
-                          </span>
-                          <span className="block text-xs text-gray-500">PNG, JPG, GIF up to 10MB</span>
-                        </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleScreenshotChange(type, e.target.files[0])}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <ScreenshotManager
+              screenshots={screenshots}
+              onScreenshotsChange={handleScreenshotsChange}
+              maxScreenshots={10}
+            />
           </div>
 
           {/* Analysis */}

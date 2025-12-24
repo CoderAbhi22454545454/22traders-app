@@ -23,25 +23,42 @@ const chipSchema = new mongoose.Schema({
   }
 });
 
-// Schema for screenshot with description
+// Schema for screenshot with label, description, and border color
 const screenshotSchema = new mongoose.Schema({
-  type: {
+  // New format fields
+  imageUrl: {
     type: String,
-    enum: ['before', 'entry', 'after'],
-    required: true
-  },
-  url: {
-    type: String,
-    required: true
+    required: false // Not required for backward compatibility with old 'url' field
   },
   publicId: {
     type: String,
     required: true
   },
+  label: {
+    type: String,
+    trim: true,
+    maxlength: 100,
+    default: ''
+  },
   description: {
     type: String,
     trim: true,
-    maxlength: 500
+    maxlength: 500,
+    default: ''
+  },
+  borderColor: {
+    type: String,
+    default: '#3B82F6', // Default blue color
+    trim: true
+  },
+  // Old format fields (for backward compatibility)
+  url: {
+    type: String,
+    required: false // Old field, kept for backward compatibility
+  },
+  type: {
+    type: String,
+    required: false // Old field, kept for backward compatibility
   },
   metadata: {
     filename: String,
@@ -134,8 +151,16 @@ const backtestSchema = new mongoose.Schema({
   // Custom chips/labels - this is the key feature for backtesting
   customChips: [chipSchema],
   
-  // Multiple screenshots with descriptions
-  screenshots: [screenshotSchema],
+  // Multiple screenshots with labels, descriptions, and border colors (max 10)
+  screenshots: {
+    type: [screenshotSchema],
+    validate: {
+      validator: function(v) {
+        return v.length <= 10;
+      },
+      message: 'Maximum 10 screenshots allowed per trade'
+    }
+  },
   
   // Backtesting specific fields
   backtestNotes: {

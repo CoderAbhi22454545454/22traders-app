@@ -5,6 +5,7 @@ import { tradesAPI, formatCurrency, formatDate, checklistAPI } from '../utils/ap
 import { useNotifications } from './Notifications';
 import InstrumentIcon from './shared/InstrumentIcon';
 import TradeChecklistExecutor from './TradeChecklistExecutor';
+import ScreenshotManager from './ScreenshotManager';
 
 
 // Predefined emotion options
@@ -44,15 +45,14 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
     emotions: [],
     customEmotion: '',
     lessonLearned: '',
-    additionalNotes: '',
-    screenshot: null
+    additionalNotes: ''
   });
   
+  const [screenshots, setScreenshots] = useState([]);
   const [existingTrades, setExistingTrades] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [previewUrl, setPreviewUrl] = useState('');
+  const [errors, setErrors] = useState({});;
 
   const { success, error, warning } = useNotifications();
 
@@ -130,11 +130,34 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
       emotions: existingEmotions,
       customEmotion: '',
       lessonLearned: editTrade.lessonLearned || '',
-      additionalNotes: editTrade.additionalNotes || editTrade.notes || '',
-      screenshot: null
+      additionalNotes: editTrade.additionalNotes || editTrade.notes || ''
     });
-    if (editTrade.screenshotUrl) {
-      setPreviewUrl(editTrade.screenshotUrl);
+    
+    // Load existing screenshots
+    if (editTrade.screenshots && editTrade.screenshots.length > 0) {
+      const formattedScreenshots = editTrade.screenshots.map(screenshot => ({
+        id: screenshot._id,
+        imageUrl: screenshot.imageUrl || screenshot.url,
+        publicId: screenshot.publicId,
+        label: screenshot.label || '',
+        description: screenshot.description || '',
+        borderColor: screenshot.borderColor || '#3B82F6',
+        isNew: false,
+        isExisting: true
+      }));
+      setScreenshots(formattedScreenshots);
+    } else if (editTrade.screenshotUrl) {
+      // Handle old single screenshot format
+      setScreenshots([{
+        id: 'legacy',
+        imageUrl: editTrade.screenshotUrl,
+        publicId: editTrade.screenshotPublicId || '',
+        label: 'Trade Screenshot',
+        description: '',
+        borderColor: '#3B82F6',
+        isNew: false,
+        isExisting: true
+      }]);
     }
   };
 
@@ -213,10 +236,9 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
       emotions: [],
       customEmotion: '',
       lessonLearned: '',
-      additionalNotes: '',
-      screenshot: null
+      additionalNotes: ''
     });
-    setPreviewUrl('');
+    setScreenshots([]);
     setErrors({});
   };
 
@@ -269,42 +291,7 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
     }));
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        error('File size must be less than 10MB');
-        return;
-      }
-      
-      if (!file.type.startsWith('image/')) {
-        error('Only image files are allowed');
-        return;
-      }
-      
-      setFormData(prev => ({
-        ...prev,
-        screenshot: file
-      }));
-      
-      // Create preview URL
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
-      success('Screenshot uploaded successfully');
-    }
-  };
-
-  const removeScreenshot = () => {
-    setFormData(prev => ({
-      ...prev,
-      screenshot: null
-    }));
-    if (previewUrl && !previewUrl.startsWith('http')) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    setPreviewUrl('');
-    success('Screenshot removed');
-  };
+  // Screenshot management now handled by ScreenshotManager component
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -317,26 +304,36 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
     setSubmitting(true);
 
     try {
-      const tradeData = {
-        ...formData,
-        userId,
-        date: selectedDate.toISOString(),
-        emotions: formData.emotions.join(', '), // Convert array back to string
-        // Convert numeric fields
-        entryPrice: formData.entryPrice ? parseFloat(formData.entryPrice) : undefined,
-        exitPrice: formData.exitPrice ? parseFloat(formData.exitPrice) : undefined,
-        stopLoss: formData.stopLoss ? parseFloat(formData.stopLoss) : undefined,
-        takeProfit: formData.takeProfit ? parseFloat(formData.takeProfit) : undefined,
-        pnl: formData.pnl ? parseFloat(formData.pnl) : undefined,
-        pipes: formData.pipes,
-        isBacktest: formData.isBacktest,
-        // Map new fields to old fields for backward compatibility
-        instrument: formData.tradePair,
-        lotSize: formData.positionSize ? parseFloat(formData.positionSize) : undefined,
-        result: formData.tradeOutcome?.toLowerCase(),
-        notes: formData.additionalNotes,
-        // Include pre-trade checklist data
-        preTradeChecklist: checklistResult ? {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+      
+      // Build FormData for file uploads
+      const formDataToSend = new FormData();
+      
+      // Add all form fields
+      formDataToSend.append('userId', userId);
+      formDataToSend.append('date', selectedDate.toISOString());
+      formDataToSend.append('emotions', formData.emotions.join(', '));
+      
+      // Add all other fields
+      Object.keys(formData).forEach(key => {
+        if (formData[key] !== undefined && formData[key] !== null && formData[key] !== '' && key !== 'emotions') {
+          formDataToSend.append(key, formData[key]);
+        }
+      });
+      
+      // Map fields for backward compatibility
+      formDataToSend.append('instrument', formData.tradePair || '');
+      if (formData.positionSize) {
+        formDataToSend.append('lotSize', formData.positionSize);
+      }
+      if (formData.tradeOutcome) {
+        formDataToSend.append('result', formData.tradeOutcome.toLowerCase());
+      }
+      formDataToSend.append('notes', formData.additionalNotes || '');
+      
+      // Add pre-trade checklist data if available
+      if (checklistResult) {
+        formDataToSend.append('preTradeChecklist', JSON.stringify({
           checklistId: checklistResult.checklistId,
           checklistName: checklistResult.checklistName,
           completionPercentage: checklistResult.completionPercentage,
@@ -344,37 +341,89 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
           setupQuality: checklistResult.setupQuality,
           items: checklistResult.items,
           overallNotes: checklistResult.overallNotes
-        } : null
-      };
-
-      let savedTrade;
-      if (isEditMode) {
-        savedTrade = await tradesAPI.updateTrade(editTrade._id, tradeData);
-        success('Trade updated successfully!');
-      } else {
-        savedTrade = await tradesAPI.createTrade(tradeData);
-        
-        // Save checklist result to database if we have one
-        if (checklistResult && savedTrade.trade) {
-          try {
-            const checklistResultData = {
-              userId,
-              tradeId: savedTrade.trade._id,
-              checklistId: checklistResult.checklistId,
-              items: checklistResult.items,
-              overallNotes: checklistResult.overallNotes,
-              qualityScore: checklistResult.qualityScore,
-              isCompleted: true
-            };
-            await checklistAPI.saveChecklistResult(checklistResultData);
-          } catch (checklistErr) {
-            console.error('Error saving checklist result:', checklistErr);
-            warning('Trade saved but checklist result could not be saved.');
-          }
-        }
-        
-        success('Trade created successfully!');
+        }));
       }
+
+      // Handle screenshots
+      const newScreenshots = screenshots.filter(s => s.isNew && s.file);
+      const existingScreenshots = screenshots.filter(s => s.isExisting);
+
+      if (isEditMode) {
+        // For edit mode: track removals and updates
+        const originalScreenshots = editTrade.screenshots || [];
+        const removedIds = originalScreenshots
+          .filter(orig => !existingScreenshots.find(ex => ex.id === orig._id))
+          .map(s => s._id);
+        
+        if (removedIds.length > 0) {
+          formDataToSend.append('removeScreenshots', JSON.stringify(removedIds));
+        }
+
+        // Track metadata updates for existing screenshots
+        const updates = existingScreenshots.map(s => ({
+          id: s.id,
+          label: s.label,
+          description: s.description,
+          borderColor: s.borderColor
+        }));
+        
+        if (updates.length > 0) {
+          formDataToSend.append('updateScreenshots', JSON.stringify(updates));
+        }
+      }
+
+      // Add new screenshot files
+      newScreenshots.forEach(screenshot => {
+        formDataToSend.append('screenshots', screenshot.file);
+      });
+
+      // Add screenshot metadata for new screenshots
+      if (newScreenshots.length > 0) {
+        const screenshotMetadata = newScreenshots.map(s => ({
+          label: s.label,
+          description: s.description,
+          borderColor: s.borderColor
+        }));
+        formDataToSend.append('screenshotMetadata', JSON.stringify(screenshotMetadata));
+      }
+
+      // Make API call with FormData
+      const url = isEditMode 
+        ? `${API_BASE_URL}/trades/${editTrade._id}` 
+        : `${API_BASE_URL}/trades`;
+      
+      const response = await fetch(url, {
+        method: isEditMode ? 'PUT' : 'POST',
+        body: formDataToSend
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to ${isEditMode ? 'update' : 'create'} trade`);
+      }
+
+      const savedTrade = await response.json();
+      
+      // Save checklist result to database if we have one (for new trades)
+      if (!isEditMode && checklistResult && savedTrade.trade) {
+        try {
+          const checklistResultData = {
+            userId,
+            tradeId: savedTrade.trade._id,
+            checklistId: checklistResult.checklistId,
+            items: checklistResult.items,
+            overallNotes: checklistResult.overallNotes,
+            qualityScore: checklistResult.qualityScore,
+            isCompleted: true
+          };
+          await checklistAPI.saveChecklistResult(checklistResultData);
+        } catch (checklistErr) {
+          console.error('Error saving checklist result:', checklistErr);
+          warning('Trade saved but checklist result could not be saved.');
+        }
+      }
+      
+      success(`Trade ${isEditMode ? 'updated' : 'created'} successfully!`);
       
       // Refresh existing trades and notify parent
       await fetchExistingTrades();
@@ -383,6 +432,7 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
       resetForm();
       onClose();
     } catch (err) {
+      console.error('Error submitting trade:', err);
       error(err.message || `Failed to ${isEditMode ? 'update' : 'create'} trade`);
     } finally {
       setSubmitting(false);
@@ -1041,52 +1091,16 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
                       </div>
 
                       {/* Screenshot Upload */}
+                      {/* Multiple Trade Screenshots */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Chart Screenshot
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Trade Screenshots (up to 10)
                         </label>
-                        <div className="mt-1 flex justify-center px-6 pt-4 pb-4 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors">
-                          <div className="space-y-1 text-center">
-                            {previewUrl ? (
-                              <div className="relative">
-                                <img
-                                  src={previewUrl}
-                                  alt="Screenshot preview"
-                                  className="mx-auto h-24 w-auto rounded-lg"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={removeScreenshot}
-                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                                >
-                                  <XMarkIcon className="h-3 w-3" />
-                                </button>
-                              </div>
-                            ) : (
-                              <>
-                                <PhotoIcon className="mx-auto h-8 w-8 text-gray-400" />
-                                <div className="flex text-sm text-gray-600">
-                                  <label
-                                    htmlFor="screenshot"
-                                    className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
-                                  >
-                                    <span>Upload a screenshot</span>
-                                    <input
-                                      id="screenshot"
-                                      name="screenshot"
-                                      type="file"
-                                      className="sr-only"
-                                      accept="image/*"
-                                      onChange={handleFileChange}
-                                    />
-                                  </label>
-                                  <p className="pl-1">or drag and drop</p>
-                                </div>
-                                <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                              </>
-                            )}
-                          </div>
-                        </div>
+                        <ScreenshotManager
+                          screenshots={screenshots}
+                          onScreenshotsChange={setScreenshots}
+                          maxScreenshots={10}
+                        />
                       </div>
 
                       {/* Form Actions */}
@@ -1127,7 +1141,7 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
 
         {/* Checklist Executor Modal */}
         {showChecklistExecutor && selectedChecklist && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-60">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
             <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               <TradeChecklistExecutor
                 userId={userId}

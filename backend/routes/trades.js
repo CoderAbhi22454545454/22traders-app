@@ -255,7 +255,7 @@ router.get('/count', async (req, res) => {
 });
 
 // POST /api/trades - Add a new trade entry
-router.post('/', upload.single('screenshot'), tradeValidation, async (req, res) => {
+router.post('/', upload.array('screenshots', 10), tradeValidation, async (req, res) => {
   try {
     // Check validation errors
     const errors = validationResult(req);
@@ -293,25 +293,54 @@ router.post('/', upload.single('screenshot'), tradeValidation, async (req, res) 
       reasonForTrade,
       lessonLearned,
       notes,
-      additionalNotes
+      additionalNotes,
+      screenshotMetadata // JSON string containing label, description, borderColor for each screenshot
     } = req.body;
 
-    // Upload screenshot if provided
-    let screenshotUrl = '';
-    let screenshotPublicId = '';
-    let screenshotMetadata = {};
-    if (req.file) {
-      try {
-        // Upload image to Cloudinary
-        const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.originalname);
+    console.log('📸 [Trade POST] Received files:', req.files?.length || 0);
+    console.log('📝 [Trade POST] Screenshot metadata:', screenshotMetadata);
 
-        screenshotUrl = uploadResult.url;
-        screenshotPublicId = uploadResult.publicId;
-        screenshotMetadata = uploadResult.metadata;
+    // Handle multiple screenshots upload
+    let screenshots = [];
+    if (req.files && req.files.length > 0) {
+      try {
+        // Parse screenshot metadata if provided
+        let metadata = [];
+        if (screenshotMetadata) {
+          try {
+            metadata = JSON.parse(screenshotMetadata);
+            console.log('✅ [Trade POST] Parsed metadata:', metadata);
+          } catch (parseError) {
+            console.warn('⚠️  [Trade POST] Failed to parse screenshot metadata:', parseError);
+          }
+        }
+
+        // Upload each screenshot to Cloudinary
+        for (let i = 0; i < req.files.length; i++) {
+          const file = req.files[i];
+          const meta = metadata[i] || {};
+
+          console.log(`📤 [Trade POST] Uploading screenshot ${i + 1}/${req.files.length}`);
+
+          const uploadResult = await uploadToCloudinary(file.buffer, file.originalname);
+
+          screenshots.push({
+            imageUrl: uploadResult.url,
+            publicId: uploadResult.publicId,
+            label: meta.label || '',
+            description: meta.description || '',
+            borderColor: meta.borderColor || '#3B82F6',
+            metadata: uploadResult.metadata
+          });
+
+          console.log(`✅ [Trade POST] Screenshot ${i + 1} uploaded successfully`);
+        }
+
+        console.log('✅ [Trade POST] All screenshots uploaded. Total:', screenshots.length);
       } catch (uploadError) {
-        console.error('Cloudinary upload error:', uploadError);
+        console.error('❌ [Trade POST] Cloudinary upload error:', uploadError);
         return res.status(500).json({ 
-          message: 'Error uploading screenshot to Cloudinary', 
+          message: 'Error uploading screenshots to Cloudinary', 
           error: uploadError.message 
         });
       }
@@ -346,20 +375,22 @@ router.post('/', upload.single('screenshot'), tradeValidation, async (req, res) 
       lessonLearned,
       notes,
       additionalNotes,
-      screenshotUrl,
-      screenshotPublicId,
-      screenshotMetadata
+      screenshots: screenshots // New multiple screenshots field
     });
+
+    console.log('💾 [Trade POST] Saving trade with', screenshots.length, 'screenshots');
 
     const savedTrade = await trade.save();
     await savedTrade.populate('userId', 'name email');
+
+    console.log('✅ [Trade POST] Trade saved successfully with ID:', savedTrade._id);
 
     res.status(201).json({
       message: 'Trade created successfully',
       trade: savedTrade
     });
   } catch (error) {
-    console.error('Error creating trade:', error);
+    console.error('❌ [Trade POST] Error creating trade:', error);
     res.status(500).json({ 
       message: 'Error creating trade', 
       error: error.message 
@@ -670,7 +701,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // PUT /api/trades/:id - Update trade
-router.put('/:id', upload.single('screenshot'), tradeValidation, async (req, res) => {
+router.put('/:id', upload.array('screenshots', 10), tradeValidation, async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -684,35 +715,121 @@ router.put('/:id', upload.single('screenshot'), tradeValidation, async (req, res
       date, instrument, tradePair, tradeNumber, entryPrice, exitPrice, 
       stopLoss, takeProfit, pnl, pipes, isBacktest, result, tradeOutcome, direction, lotSize,
       positionSize, riskReward, strategy, session, tradeDuration,
-      executionScore, emotions, reasonForTrade, lessonLearned, notes, additionalNotes
+      executionScore, emotions, reasonForTrade, lessonLearned, notes, additionalNotes,
+      removeScreenshots, // JSON array of screenshot IDs to remove
+      updateScreenshots, // JSON array of screenshot updates (id, label, description, borderColor)
+      screenshotMetadata // JSON string for new screenshots
     } = req.body;
 
-    // Upload new screenshot if provided
-    let screenshotUrl;
-    let screenshotPublicId;
-    let screenshotMetadata;
-    if (req.file) {
+    console.log('📸 [Trade PUT] Updating trade:', req.params.id);
+    console.log('📸 [Trade PUT] Files received:', req.files?.length || 0);
+    console.log('🗑️  [Trade PUT] Screenshots to remove:', removeScreenshots);
+    console.log('✏️  [Trade PUT] Screenshots to update:', updateScreenshots);
+
+    // Get existing trade
+    const existingTrade = await Trade.findById(req.params.id);
+    if (!existingTrade) {
+      return res.status(404).json({ message: 'Trade not found' });
+    }
+
+    // Migrate old screenshot format to new format if needed
+    if (!existingTrade.screenshots || existingTrade.screenshots.length === 0) {
+      if (existingTrade.screenshotUrl && existingTrade.screenshotPublicId) {
+        console.log('🔄 [Trade PUT] Migrating old screenshot format to new format');
+        existingTrade.screenshots = [{
+          imageUrl: existingTrade.screenshotUrl,
+          publicId: existingTrade.screenshotPublicId,
+          label: 'Trade Screenshot',
+          description: '',
+          borderColor: '#3B82F6',
+          metadata: existingTrade.screenshotMetadata || {}
+        }];
+      }
+    }
+
+    // Handle screenshot removals
+    if (removeScreenshots) {
       try {
-        // Delete old screenshot from Cloudinary if exists
-        const existingTrade = await Trade.findById(req.params.id);
-        if (existingTrade && existingTrade.screenshotPublicId) {
+        const idsToRemove = JSON.parse(removeScreenshots);
+        console.log('🗑️  [Trade PUT] Removing screenshots:', idsToRemove);
+        
+        for (const screenshotId of idsToRemove) {
+          const screenshot = existingTrade.screenshots.find(s => s._id.toString() === screenshotId);
+          if (screenshot && screenshot.publicId) {
+            try {
+              await deleteFromCloudinary(screenshot.publicId);
+              console.log('✅ [Trade PUT] Deleted screenshot from Cloudinary:', screenshot.publicId);
+            } catch (deleteError) {
+              console.warn('⚠️  [Trade PUT] Failed to delete screenshot from Cloudinary:', deleteError);
+            }
+          }
+          
+          // Remove from array
+          existingTrade.screenshots = existingTrade.screenshots.filter(
+            s => s._id.toString() !== screenshotId
+          );
+        }
+      } catch (parseError) {
+        console.error('❌ [Trade PUT] Error parsing removeScreenshots:', parseError);
+      }
+    }
+
+    // Handle screenshot metadata updates
+    if (updateScreenshots) {
+      try {
+        const updates = JSON.parse(updateScreenshots);
+        console.log('✏️  [Trade PUT] Updating screenshot metadata:', updates);
+        
+        for (const update of updates) {
+          const screenshot = existingTrade.screenshots.find(s => s._id.toString() === update.id);
+          if (screenshot) {
+            if (update.label !== undefined) screenshot.label = update.label;
+            if (update.description !== undefined) screenshot.description = update.description;
+            if (update.borderColor !== undefined) screenshot.borderColor = update.borderColor;
+            console.log('✅ [Trade PUT] Updated screenshot:', screenshot._id);
+          }
+        }
+      } catch (parseError) {
+        console.error('❌ [Trade PUT] Error parsing updateScreenshots:', parseError);
+      }
+    }
+
+    // Handle new screenshot uploads
+    if (req.files && req.files.length > 0) {
+      try {
+        let metadata = [];
+        if (screenshotMetadata) {
           try {
-            await deleteFromCloudinary(existingTrade.screenshotPublicId);
-          } catch (deleteError) {
-            console.warn('Failed to delete old screenshot from Cloudinary:', deleteError);
+            metadata = JSON.parse(screenshotMetadata);
+            console.log('✅ [Trade PUT] Parsed new screenshot metadata:', metadata);
+          } catch (parseError) {
+            console.warn('⚠️  [Trade PUT] Failed to parse screenshot metadata:', parseError);
           }
         }
 
-        // Upload new image to Cloudinary
-        const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.originalname);
+        for (let i = 0; i < req.files.length; i++) {
+          const file = req.files[i];
+          const meta = metadata[i] || {};
 
-        screenshotUrl = uploadResult.url;
-        screenshotPublicId = uploadResult.publicId;
-        screenshotMetadata = uploadResult.metadata;
+          console.log(`📤 [Trade PUT] Uploading new screenshot ${i + 1}/${req.files.length}`);
+
+          const uploadResult = await uploadToCloudinary(file.buffer, file.originalname);
+
+          existingTrade.screenshots.push({
+            imageUrl: uploadResult.url,
+            publicId: uploadResult.publicId,
+            label: meta.label || '',
+            description: meta.description || '',
+            borderColor: meta.borderColor || '#3B82F6',
+            metadata: uploadResult.metadata
+          });
+
+          console.log(`✅ [Trade PUT] New screenshot ${i + 1} uploaded successfully`);
+        }
       } catch (uploadError) {
-        console.error('Cloudinary upload error:', uploadError);
+        console.error('❌ [Trade PUT] Cloudinary upload error:', uploadError);
         return res.status(500).json({ 
-          message: 'Error uploading screenshot to Cloudinary', 
+          message: 'Error uploading screenshots to Cloudinary', 
           error: uploadError.message 
         });
       }
@@ -744,7 +861,8 @@ router.put('/:id', upload.single('screenshot'), tradeValidation, async (req, res
       reasonForTrade,
       lessonLearned,
       notes,
-      additionalNotes
+      additionalNotes,
+      screenshots: existingTrade.screenshots // Updated screenshots array
     };
 
     // Remove undefined values to avoid overwriting existing data with undefined
@@ -754,12 +872,7 @@ router.put('/:id', upload.single('screenshot'), tradeValidation, async (req, res
       }
     });
 
-    // Only update screenshot if new one provided
-    if (screenshotUrl) {
-      updateData.screenshotUrl = screenshotUrl;
-      updateData.screenshotPublicId = screenshotPublicId;
-      updateData.screenshotMetadata = screenshotMetadata;
-    }
+    console.log('💾 [Trade PUT] Saving trade with', updateData.screenshots?.length || 0, 'screenshots');
 
     const trade = await Trade.findByIdAndUpdate(
       req.params.id,
@@ -770,6 +883,9 @@ router.put('/:id', upload.single('screenshot'), tradeValidation, async (req, res
     if (!trade) {
       return res.status(404).json({ message: 'Trade not found' });
     }
+
+    console.log('✅ [Trade PUT] Trade updated successfully');
+
 
     res.json({
       message: 'Trade updated successfully',

@@ -235,3 +235,6 @@ const BacktestTemplateManager = ({ userId, onSelectTemplate, showModal, onClose 
 export default BacktestTemplateManager;
 
 
+
+
+

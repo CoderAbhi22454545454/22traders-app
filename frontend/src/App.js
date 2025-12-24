@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard';
 import Analytics from './components/Analytics';
 import Trades from './components/Trades';
 import TradeDetail from './components/TradeDetail';
+import EditTrade from './components/EditTrade';
 import Backtests from './components/Backtests';
 import MasterCards from './components/MasterCards';
 import MasterCardDetail from './components/MasterCardDetail';
@@ -266,6 +267,10 @@ function App() {
               <Route 
                 path="/trade/:id" 
                 element={<TradeDetail userId={user.id} />} 
+              />
+              <Route 
+                path="/trade/:id/edit" 
+                element={<EditTrade userId={user.id} />} 
               />
               <Route 
                 path="/journal" 

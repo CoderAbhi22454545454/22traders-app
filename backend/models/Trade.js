@@ -128,6 +128,7 @@ const tradeSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Legacy single screenshot fields (kept for backward compatibility)
   screenshotUrl: {
     type: String,
     trim: true
@@ -160,6 +161,54 @@ const tradeSchema = new mongoose.Schema({
     cloudinaryPublicId: {
       type: String,
       trim: true
+    }
+  },
+  // New multiple screenshots field
+  screenshots: {
+    type: [{
+      imageUrl: {
+        type: String,
+        required: false
+      },
+      publicId: {
+        type: String,
+        required: true
+      },
+      label: {
+        type: String,
+        trim: true,
+        maxlength: 100
+      },
+      description: {
+        type: String,
+        trim: true,
+        maxlength: 500
+      },
+      borderColor: {
+        type: String,
+        default: '#3B82F6',
+        trim: true
+      },
+      // Old fields for backward compatibility with legacy single screenshot
+      url: {
+        type: String,
+        required: false
+      },
+      metadata: {
+        filename: String,
+        mimetype: String,
+        size: Number,
+        uploadDate: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    }],
+    validate: {
+      validator: function(v) {
+        return v.length <= 10;
+      },
+      message: 'Maximum 10 screenshots allowed per trade'
     }
   },
   // Pre-trade checklist data
