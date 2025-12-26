@@ -55,11 +55,17 @@ const EditTrade = ({ userId }) => {
     );
   }
 
+  const parseDate = (date) => {
+    if (!date) return new Date();
+    const parsed = new Date(date);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+  };
+
   return (
     <TradeModal
       isOpen={true}
       onClose={handleClose}
-      selectedDate={trade.date ? new Date(trade.date) : new Date()}
+      selectedDate={parseDate(trade.date)}
       userId={userId}
       editTrade={trade}
       onTradeAdded={handleTradeUpdated}

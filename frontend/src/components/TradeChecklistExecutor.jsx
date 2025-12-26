@@ -35,27 +35,43 @@ const TradeChecklistExecutor = ({
   const [showSummary, setShowSummary] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+    
     if (!initialChecklist && checklistId) {
-      fetchChecklist();
+      fetchChecklist().then(() => {
+        if (!isMounted) return;
+      }).catch(() => {
+        if (!isMounted) return;
+      });
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [checklistId, initialChecklist]);
 
   const fetchChecklist = async () => {
     try {
       setLoading(true);
       const response = await checklistAPI.getChecklist(checklistId);
-      setChecklist(response.checklist);
-      
-      // Initialize responses
-      const initialResponses = {};
-      response.checklist.items.forEach(item => {
-        initialResponses[item._id] = {
-          isCompleted: false,
-          value: null,
-          notes: ''
-        };
-      });
-      setResponses(initialResponses);
+      if (response.checklist) {
+        setChecklist(response.checklist);
+        
+        // Initialize responses
+        const initialResponses = {};
+        if (response.checklist.items && Array.isArray(response.checklist.items)) {
+          response.checklist.items.forEach(item => {
+            if (item && item._id) {
+              initialResponses[item._id] = {
+                isCompleted: false,
+                value: null,
+                notes: ''
+              };
+            }
+          });
+        }
+        setResponses(initialResponses);
+      }
     } catch (err) {
       setError(err.message || 'Failed to fetch checklist');
     } finally {
@@ -71,7 +87,7 @@ const TradeChecklistExecutor = ({
   };
 
   const goToNextStep = () => {
-    if (currentStep < checklist.items.length - 1) {
+    if (checklist?.items && Array.isArray(checklist.items) && currentStep < checklist.items.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
       setShowSummary(true);
@@ -90,14 +106,24 @@ const TradeChecklistExecutor = ({
 
   const handleComplete = async () => {
     try {
-      const items = Object.entries(responses).map(([itemId, response]) => ({
-        itemId,
-        title: checklist.items.find(item => item._id === itemId)?.title || '',
-        isCompleted: response.isCompleted,
-        value: response.value,
-        notes: response.notes,
-        order: checklist.items.find(item => item._id === itemId)?.order || 1
-      }));
+      if (!checklist?.items || !Array.isArray(checklist.items)) {
+        setError('Checklist items are not available');
+        return;
+      }
+      
+      const items = Object.entries(responses)
+        .filter(([itemId]) => checklist.items.some(item => item && item._id === itemId))
+        .map(([itemId, response]) => {
+          const checklistItem = checklist.items.find(item => item && item._id === itemId);
+          return {
+            itemId,
+            title: checklistItem?.title || 'Unknown Item',
+            isCompleted: response.isCompleted,
+            value: response.value,
+            notes: response.notes,
+            order: checklistItem?.order || 1
+          };
+        });
 
       const resultData = {
         userId,
@@ -114,9 +140,9 @@ const TradeChecklistExecutor = ({
         if (onComplete) {
           onComplete({
             checklistId,
-            checklistName: checklist.name,
+            checklistName: checklist?.name || 'Unknown Checklist',
             completionPercentage: calculateCompletionPercentage(),
-            qualityScore,
+            qualityScore: null, // Pre-trade doesn't require quality score
             setupQuality: assessSetupQuality(),
             items,
             overallNotes,
@@ -144,15 +170,22 @@ const TradeChecklistExecutor = ({
   };
 
   const calculateCompletionPercentage = () => {
+    if (!checklist?.items || !Array.isArray(checklist.items) || checklist.items.length === 0) {
+      return 0;
+    }
     const completedItems = Object.values(responses).filter(r => r.isCompleted).length;
     return Math.round((completedItems / checklist.items.length) * 100);
   };
 
   const assessSetupQuality = () => {
+    if (!checklist?.items || !Array.isArray(checklist.items) || checklist.items.length === 0) {
+      return 'poor';
+    }
+    
     const completionPercentage = calculateCompletionPercentage();
-    const requiredItems = checklist.items.filter(item => item.isRequired);
+    const requiredItems = checklist.items.filter(item => item && item.isRequired);
     const completedRequired = requiredItems.filter(item => 
-      responses[item._id]?.isCompleted
+      item._id && responses[item._id]?.isCompleted
     ).length;
 
     if (completionPercentage >= 90 && completedRequired === requiredItems.length) {
@@ -207,8 +240,26 @@ const TradeChecklistExecutor = ({
     );
   }
 
+  if (!checklist?.items || !Array.isArray(checklist.items) || checklist.items.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <DocumentTextIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <p className="text-gray-600">Checklist has no items</p>
+      </div>
+    );
+  }
+
   const currentItem = checklist.items[currentStep];
-  const currentResponse = responses[currentItem?._id] || { isCompleted: false, value: null, notes: '' };
+  if (!currentItem) {
+    return (
+      <div className="text-center py-8">
+        <DocumentTextIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <p className="text-gray-600">Invalid checklist step</p>
+      </div>
+    );
+  }
+  
+  const currentResponse = responses[currentItem._id] || { isCompleted: false, value: null, notes: '' };
   const completionPercentage = calculateCompletionPercentage();
   const setupQuality = assessSetupQuality();
 
@@ -238,7 +289,7 @@ const TradeChecklistExecutor = ({
               Question {currentStep + 1}
             </div>
             <span className="text-blue-800 font-medium">
-              of {checklist.items.length}
+              of {checklist?.items?.length || 0}
             </span>
           </div>
           <div className="flex items-center space-x-2">
@@ -272,20 +323,24 @@ const TradeChecklistExecutor = ({
             {currentItem.description && (
               <p className="text-gray-600 mb-4">{currentItem.description}</p>
             )}
-            <div className="flex items-center gap-4 text-sm text-gray-500">
-              <span className="flex items-center gap-1">
-                <ChartBarIcon className="w-4 h-4" />
-                {currentItem.category.replace('-', ' ')}
-              </span>
-            </div>
+            {currentItem.category && (
+              <div className="flex items-center gap-4 text-sm text-gray-500">
+                <span className="flex items-center gap-1">
+                  <ChartBarIcon className="w-4 h-4" />
+                  {String(currentItem.category).replace('-', ' ')}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Step Input */}
-          <ChecklistItemInput
-            item={currentItem}
-            response={currentResponse}
-            onChange={(response) => handleStepResponse(currentItem._id, response)}
-          />
+          {currentItem._id && (
+            <ChecklistItemInput
+              item={currentItem}
+              response={currentResponse}
+              onChange={(response) => handleStepResponse(currentItem._id, response)}
+            />
+          )}
 
           {/* Navigation */}
           <div className="flex items-center justify-between mt-8">
@@ -301,7 +356,7 @@ const TradeChecklistExecutor = ({
               onClick={goToNextStep}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              {currentStep === checklist.items.length - 1 ? 'Review' : 'Next'}
+              {checklist?.items && currentStep === checklist.items.length - 1 ? 'Review' : 'Next'}
               <ChevronRightIcon className="w-4 h-4 ml-2" />
             </button>
           </div>
@@ -336,6 +391,7 @@ const TradeChecklistExecutor = ({
             <h4 className="font-medium text-gray-900 mb-3">Items Review</h4>
             <div className="space-y-2">
               {checklist.items.map((item, index) => {
+                if (!item || !item._id) return null;
                 const response = responses[item._id];
                 return (
                   <div key={item._id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
@@ -345,7 +401,7 @@ const TradeChecklistExecutor = ({
                       ) : (
                         <XCircleIcon className="w-5 h-5 text-red-500" />
                       )}
-                      <span className="font-medium">{index + 1}. {item.title}</span>
+                      <span className="font-medium">{index + 1}. {item.title || 'Untitled Item'}</span>
                     </div>
                     {response?.notes && (
                       <span className="text-sm text-gray-600 ml-4">
@@ -372,24 +428,26 @@ const TradeChecklistExecutor = ({
                 placeholder="Add any overall notes about this trade setup..."
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Quality Score (1-10) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="10"
-                value={qualityScore || ''}
-                onChange={(e) => setQualityScore(e.target.value ? parseInt(e.target.value) : null)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Rate the overall quality of this trade setup (1-10)"
-                required
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Rate the overall quality of your trade setup from 1 (poor) to 10 (excellent)
-              </p>
-            </div>
+            {!isPreTrade && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quality Score (1-10) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={qualityScore || ''}
+                  onChange={(e) => setQualityScore(e.target.value ? parseInt(e.target.value) : null)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Rate the overall quality of this trade setup (1-10)"
+                  required
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Rate the overall quality of your trade setup from 1 (poor) to 10 (excellent)
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Actions */}
@@ -402,7 +460,7 @@ const TradeChecklistExecutor = ({
             </button>
             <button
               onClick={handleComplete}
-              disabled={!qualityScore || qualityScore < 1 || qualityScore > 10}
+              disabled={!isPreTrade && (!qualityScore || qualityScore < 1 || qualityScore > 10)}
               className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Complete Checklist

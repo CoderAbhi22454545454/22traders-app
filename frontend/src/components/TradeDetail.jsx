@@ -59,8 +59,13 @@ const TradeDetail = ({ userId }) => {
         setChecklistResult(response.result);
       }
     } catch (err) {
-      // Silent fail if no checklist found
-      console.log('No checklist result found for this trade');
+      if (err.response?.status === 404) {
+        // No checklist found - this is expected for some trades
+        console.log('No checklist result found for this trade');
+      } else {
+        // Actual error - log but don't show to user (non-critical)
+        console.error('Error fetching checklist result:', err);
+      }
     } finally {
       setChecklistLoading(false);
     }
@@ -136,8 +141,10 @@ const TradeDetail = ({ userId }) => {
     );
   }
 
-  const result = trade.result || trade.tradeOutcome?.toLowerCase() || 
-    (trade.pnl > 0 ? 'win' : trade.pnl < 0 ? 'loss' : 'be');
+  const result = trade.result || 
+    (trade.tradeOutcome ? trade.tradeOutcome.toLowerCase() : null) ||
+    (trade.pnl != null ? (trade.pnl > 0 ? 'win' : trade.pnl < 0 ? 'loss' : 'be') : null) ||
+    'be'; // Default fallback
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-12">
@@ -467,7 +474,7 @@ const TradeDetail = ({ userId }) => {
                 </div>
 
                 {/* Checklist Items */}
-                {checklistResult.items && checklistResult.items.length > 0 && (
+                {Array.isArray(checklistResult.items) && checklistResult.items.length > 0 && (
                   <div className="mb-6">
                     <div className="flex items-center mb-4">
                       <CheckCircleIcon className="h-5 w-5 text-blue-600 mr-2" />
@@ -576,7 +583,7 @@ const TradeDetail = ({ userId }) => {
                 )}
               </h3>
               
-              {trade.screenshots && trade.screenshots.length > 0 ? (
+              {trade.screenshots?.length > 0 ? (
                 <div className="space-y-3">
                   {trade.screenshots.map((screenshot, idx) => (
                     <div 

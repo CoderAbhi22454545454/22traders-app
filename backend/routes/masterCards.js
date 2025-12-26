@@ -238,7 +238,7 @@ router.get('/:id/analytics', async (req, res) => {
     const losses = backtests.filter(b => b.result === 'loss').length;
     const totalPnL = backtests.reduce((sum, b) => sum + (b.pnl || 0), 0);
     const avgPnL = totalPnL / totalTrades;
-    const winRate = (wins / totalTrades) * 100;
+    const winRate = (wins + losses) > 0 ? (wins / (wins + losses)) * 100 : 0;
 
     const winningTrades = backtests.filter(b => b.result === 'win');
     const losingTrades = backtests.filter(b => b.result === 'loss');
@@ -396,7 +396,7 @@ router.get('/analytics/combined', async (req, res) => {
     const losses = allBacktests.filter(b => b.result === 'loss').length;
     const totalPnL = allBacktests.reduce((sum, b) => sum + (b.pnl || 0), 0);
     const avgPnL = totalPnL / totalTrades;
-    const winRate = (wins / totalTrades) * 100;
+    const winRate = (wins + losses) > 0 ? (wins / (wins + losses)) * 100 : 0;
 
     // Per master card statistics
     const masterCardStats = await Promise.all(
@@ -405,7 +405,7 @@ router.get('/analytics/combined', async (req, res) => {
         const cardWins = cardBacktests.filter(b => b.result === 'win').length;
         const cardLosses = cardBacktests.filter(b => b.result === 'loss').length;
         const cardPnL = cardBacktests.reduce((sum, b) => sum + (b.pnl || 0), 0);
-        const cardWinRate = cardBacktests.length > 0 ? (cardWins / cardBacktests.length) * 100 : 0;
+        const cardWinRate = (cardWins + cardLosses) > 0 ? (cardWins / (cardWins + cardLosses)) * 100 : 0;
 
         return {
           id: card._id,

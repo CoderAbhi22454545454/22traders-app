@@ -91,7 +91,7 @@ masterCardSchema.methods.getStatistics = async function() {
   const losses = backtests.filter(b => b.result === 'loss').length;
   const totalPnL = backtests.reduce((sum, b) => sum + (b.pnl || 0), 0);
   const avgPnL = totalPnL / backtests.length;
-  const winRate = (wins / backtests.length) * 100;
+  const winRate = (wins + losses) > 0 ? (wins / (wins + losses)) * 100 : 0;
   
   return {
     totalTrades: backtests.length,

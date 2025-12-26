@@ -132,7 +132,45 @@ const NewBacktest = ({ userId }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Auto-adjust PnL sign based on result
+    if (name === 'result') {
+      setFormData(prev => {
+        const updatedData = { ...prev, [name]: value };
+        
+        // If result is "loss" and PnL is positive, make it negative
+        if (value === 'loss' && prev.pnl && parseFloat(prev.pnl) > 0) {
+          updatedData.pnl = (-Math.abs(parseFloat(prev.pnl))).toString();
+        }
+        // If result is "win" and PnL is negative, make it positive
+        else if (value === 'win' && prev.pnl && parseFloat(prev.pnl) < 0) {
+          updatedData.pnl = Math.abs(parseFloat(prev.pnl)).toString();
+        }
+        
+        return updatedData;
+      });
+    } 
+    // When PnL is entered/changed, auto-adjust sign based on current result
+    else if (name === 'pnl') {
+      setFormData(prev => {
+        const numValue = parseFloat(value);
+        let adjustedValue = value;
+        
+        // If result is "loss", ensure PnL is negative
+        if (prev.result === 'loss' && numValue > 0) {
+          adjustedValue = (-Math.abs(numValue)).toString();
+        }
+        // If result is "win", ensure PnL is positive
+        else if (prev.result === 'win' && numValue < 0) {
+          adjustedValue = Math.abs(numValue).toString();
+        }
+        
+        return { ...prev, [name]: adjustedValue };
+      });
+    }
+    else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   // Custom chip management
@@ -242,6 +280,12 @@ const NewBacktest = ({ userId }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!formData.masterCardId) {
+      setError('Master Card is required');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
 
@@ -260,18 +304,24 @@ const NewBacktest = ({ userId }) => {
 
       // Add screenshots and their metadata (up to 10)
       const screenshotMetadata = [];
+      const filesToUpload = [];
       
       console.log('📸 Screenshots to upload:', screenshots);
       
       screenshots.forEach((screenshot) => {
         if (screenshot.file) {
-          formDataToSend.append('screenshots', screenshot.file);
+          filesToUpload.push(screenshot.file);
           screenshotMetadata.push({
             label: screenshot.label || '',
             description: screenshot.description || '',
             borderColor: screenshot.borderColor || '#3B82F6'
           });
         }
+      });
+
+      // Add files in order to match metadata array
+      filesToUpload.forEach(file => {
+        formDataToSend.append('screenshots', file);
       });
 
       console.log('📸 Screenshot Metadata being sent:', screenshotMetadata);
@@ -286,8 +336,14 @@ const NewBacktest = ({ userId }) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create backtest');
+        let errorMessage = 'Failed to create backtest';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();

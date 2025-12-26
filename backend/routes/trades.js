@@ -199,7 +199,7 @@ router.get('/', async (req, res) => {
 
     const statistics = stats.length > 0 ? {
       ...stats[0],
-      winRate: stats[0].totalTrades > 0 ? (stats[0].winningTrades / stats[0].totalTrades * 100).toFixed(2) : 0
+      winRate: (stats[0].winningTrades + stats[0].losingTrades) > 0 ? (stats[0].winningTrades / (stats[0].winningTrades + stats[0].losingTrades) * 100).toFixed(2) : 0
     } : {
       totalTrades: 0,
       totalPnL: 0,
@@ -609,7 +609,7 @@ router.get('/stats', async (req, res) => {
     };
 
     // Calculate additional metrics
-    const winRate = stats.totalTrades > 0 ? ((stats.totalWins / stats.totalTrades) * 100).toFixed(2) : 0;
+    const winRate = (stats.totalWins + stats.totalLosses) > 0 ? ((stats.totalWins / (stats.totalWins + stats.totalLosses)) * 100).toFixed(2) : 0;
     const avgRiskReward = stats.totalLosses > 0 ? 
       (Math.abs(stats.totalPnL / stats.totalWins) / Math.abs(stats.totalPnL / stats.totalLosses)).toFixed(2) : 0;
 

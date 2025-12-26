@@ -74,7 +74,7 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
         }
       }
     }
-  }, [isOpen, selectedDate, userId, editTrade]);
+  }, [isOpen, selectedDate, userId, editTrade, isEditMode]);
 
   const fetchTradeCount = async () => {
     if (!userId) return;
@@ -352,8 +352,12 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
         // For edit mode: track removals and updates
         const originalScreenshots = editTrade.screenshots || [];
         const removedIds = originalScreenshots
-          .filter(orig => !existingScreenshots.find(ex => ex.id === orig._id))
-          .map(s => s._id);
+          .filter(orig => {
+            if (!orig || !orig._id) return false;
+            return !existingScreenshots.find(ex => ex.id === orig._id.toString());
+          })
+          .map(s => s._id.toString())
+          .filter(id => id); // Remove any undefined/null values
         
         if (removedIds.length > 0) {
           formDataToSend.append('removeScreenshots', JSON.stringify(removedIds));
@@ -398,8 +402,14 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to ${isEditMode ? 'update' : 'create'} trade`);
+        let errorMessage = `Failed to ${isEditMode ? 'update' : 'create'} trade`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const savedTrade = await response.json();
@@ -424,6 +434,11 @@ const TradeModal = ({ isOpen, onClose, selectedDate, userId, onTradeAdded, editT
       }
       
       success(`Trade ${isEditMode ? 'updated' : 'created'} successfully!`);
+      
+      // Clear sessionStorage if trade was created from checklist
+      if (!isEditMode && checklistResult) {
+        sessionStorage.removeItem('preTradeChecklistResult');
+      }
       
       // Refresh existing trades and notify parent
       await fetchExistingTrades();

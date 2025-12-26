@@ -155,7 +155,45 @@ const EditBacktest = ({ userId }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Auto-adjust PnL sign based on result
+    if (name === 'result') {
+      setFormData(prev => {
+        const updatedData = { ...prev, [name]: value };
+        
+        // If result is "loss" and PnL is positive, make it negative
+        if (value === 'loss' && prev.pnl && parseFloat(prev.pnl) > 0) {
+          updatedData.pnl = (-Math.abs(parseFloat(prev.pnl))).toString();
+        }
+        // If result is "win" and PnL is negative, make it positive
+        else if (value === 'win' && prev.pnl && parseFloat(prev.pnl) < 0) {
+          updatedData.pnl = Math.abs(parseFloat(prev.pnl)).toString();
+        }
+        
+        return updatedData;
+      });
+    } 
+    // When PnL is entered/changed, auto-adjust sign based on current result
+    else if (name === 'pnl') {
+      setFormData(prev => {
+        const numValue = parseFloat(value);
+        let adjustedValue = value;
+        
+        // If result is "loss", ensure PnL is negative
+        if (prev.result === 'loss' && numValue > 0) {
+          adjustedValue = (-Math.abs(numValue)).toString();
+        }
+        // If result is "win", ensure PnL is positive
+        else if (prev.result === 'win' && numValue < 0) {
+          adjustedValue = Math.abs(numValue).toString();
+        }
+        
+        return { ...prev, [name]: adjustedValue };
+      });
+    }
+    else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   // Custom chip management

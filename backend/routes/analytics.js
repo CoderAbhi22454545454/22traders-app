@@ -105,7 +105,7 @@ function calculateOverview(trades) {
   const avgWin = winningTrades > 0 ? winningPnL / winningTrades : 0;
   const avgLoss = losingTrades > 0 ? losingPnL / losingTrades : 0;
 
-  const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
+  const winRate = (winningTrades + losingTrades) > 0 ? (winningTrades / (winningTrades + losingTrades)) * 100 : 0;
   const profitFactor = losingPnL > 0 ? winningPnL / losingPnL : 0;
   const payoffRatio = avgLoss > 0 ? avgWin / avgLoss : 0;
   const expectancy = (winRate / 100) * avgWin - ((100 - winRate) / 100) * avgLoss;
@@ -177,7 +177,7 @@ function calculateMonthlyPnL(trades) {
     .map(m => ({
       ...m,
       pnl: parseFloat(m.pnl.toFixed(2)),
-      winRate: m.trades > 0 ? parseFloat(((m.wins / m.trades) * 100).toFixed(2)) : 0
+      winRate: (m.wins + m.losses) > 0 ? parseFloat(((m.wins / (m.wins + m.losses)) * 100).toFixed(2)) : 0
     }));
 }
 
@@ -213,7 +213,7 @@ function calculateWeeklyPnL(trades) {
     .map(w => ({
       ...w,
       pnl: parseFloat(w.pnl.toFixed(2)),
-      winRate: w.trades > 0 ? parseFloat(((w.wins / w.trades) * 100).toFixed(2)) : 0
+      winRate: (w.wins + w.losses) > 0 ? parseFloat(((w.wins / (w.wins + w.losses)) * 100).toFixed(2)) : 0
     }));
 }
 
@@ -271,7 +271,7 @@ function calculateSessionPerformance(trades) {
   return Object.values(sessions).map(s => ({
     ...s,
     pnl: parseFloat(s.pnl.toFixed(2)),
-    winRate: s.trades > 0 ? parseFloat(((s.wins / s.trades) * 100).toFixed(2)) : 0,
+    winRate: (s.wins + s.losses) > 0 ? parseFloat(((s.wins / (s.wins + s.losses)) * 100).toFixed(2)) : 0,
     avgPnL: s.trades > 0 ? parseFloat((s.pnl / s.trades).toFixed(2)) : 0
   }));
 }
@@ -304,7 +304,7 @@ function calculateInstrumentPerformance(trades) {
     .map(i => ({
       ...i,
       pnl: parseFloat(i.pnl.toFixed(2)),
-      winRate: i.trades > 0 ? parseFloat(((i.wins / i.trades) * 100).toFixed(2)) : 0,
+      winRate: (i.wins + i.losses) > 0 ? parseFloat(((i.wins / (i.wins + i.losses)) * 100).toFixed(2)) : 0,
       avgPnL: i.trades > 0 ? parseFloat((i.pnl / i.trades).toFixed(2)) : 0
     }))
     .sort((a, b) => b.pnl - a.pnl);
@@ -340,7 +340,7 @@ function calculateStrategyPerformance(trades) {
     .map(s => ({
       ...s,
       pnl: parseFloat(s.pnl.toFixed(2)),
-      winRate: s.trades > 0 ? parseFloat(((s.wins / s.trades) * 100).toFixed(2)) : 0,
+      winRate: (s.wins + s.losses) > 0 ? parseFloat(((s.wins / (s.wins + s.losses)) * 100).toFixed(2)) : 0,
       avgPnL: s.trades > 0 ? parseFloat((s.pnl / s.trades).toFixed(2)) : 0
     }))
     .sort((a, b) => b.pnl - a.pnl);
@@ -380,11 +380,14 @@ function calculateRRDistribution(trades) {
   const order = ['< 1:1', '1:1 - 2:1', '2:1 - 3:1', '3:1 - 5:1', '> 5:1'];
   return order
     .filter(key => distribution[key])
-    .map(key => ({
+    .map(key => {
+      const losses = distribution[key].count - distribution[key].wins;
+      return {
       ...distribution[key],
       pnl: parseFloat(distribution[key].pnl.toFixed(2)),
-      winRate: distribution[key].count > 0 ? parseFloat(((distribution[key].wins / distribution[key].count) * 100).toFixed(2)) : 0
-    }));
+        winRate: (distribution[key].wins + losses) > 0 ? parseFloat(((distribution[key].wins / (distribution[key].wins + losses)) * 100).toFixed(2)) : 0
+      };
+    });
 }
 
 // Helper function: Calculate R-multiples
@@ -702,7 +705,7 @@ function calculateTimeOfDayPerformance(trades) {
     .map(h => ({
       ...h,
       pnl: parseFloat(h.pnl.toFixed(2)),
-      winRate: h.trades > 0 ? parseFloat(((h.wins / h.trades) * 100).toFixed(2)) : 0,
+      winRate: (h.wins + h.losses) > 0 ? parseFloat(((h.wins / (h.wins + h.losses)) * 100).toFixed(2)) : 0,
       avgPnL: h.trades > 0 ? parseFloat((h.pnl / h.trades).toFixed(2)) : 0
     }))
     .sort((a, b) => a.hour - b.hour);
@@ -738,7 +741,7 @@ function calculateDayOfWeekPerformance(trades) {
     .map(d => ({
       ...d,
       pnl: parseFloat(d.pnl.toFixed(2)),
-      winRate: d.trades > 0 ? parseFloat(((d.wins / d.trades) * 100).toFixed(2)) : 0,
+      winRate: (d.wins + d.losses) > 0 ? parseFloat(((d.wins / (d.wins + d.losses)) * 100).toFixed(2)) : 0,
       avgPnL: d.trades > 0 ? parseFloat((d.pnl / d.trades).toFixed(2)) : 0
     }));
 }
@@ -777,7 +780,7 @@ function calculateHourlyHeatmap(trades) {
     hour: h.hour,
     trades: h.trades,
     pnl: parseFloat(h.pnl.toFixed(2)),
-    winRate: h.trades > 0 ? parseFloat(((h.wins / h.trades) * 100).toFixed(2)) : 0
+    winRate: (h.wins + h.losses) > 0 ? parseFloat(((h.wins / (h.wins + h.losses)) * 100).toFixed(2)) : 0
   }));
 }
 
@@ -837,12 +840,15 @@ function generateInsights(trades) {
   });
 
   const stratArray = Object.entries(strategies)
-    .map(([name, data]) => ({
+    .map(([name, data]) => {
+      const losses = data.total - data.wins;
+      return {
       name,
-      winRate: (data.wins / data.total) * 100,
+        winRate: (data.wins + losses) > 0 ? (data.wins / (data.wins + losses)) * 100 : 0,
       pnl: data.pnl,
       trades: data.total
-    }))
+      };
+    })
     .filter(s => s.trades >= 5);
 
   const bestStrategy = stratArray.reduce((best, strat) => strat.pnl > best.pnl ? strat : best, stratArray[0] || {});
@@ -1040,13 +1046,16 @@ function calculateCorrelations(trades) {
 
   const correlationData = Object.values(strategyInstrumentMatrix)
     .filter(item => item.trades >= 3)
-    .map(item => ({
+    .map(item => {
+      const losses = item.trades - item.wins;
+      return {
       strategy: item.strategy,
       instrument: item.instrument,
       trades: item.trades,
       pnl: parseFloat(item.pnl.toFixed(2)),
-      winRate: parseFloat(((item.wins / item.trades) * 100).toFixed(2))
-    }))
+        winRate: (item.wins + losses) > 0 ? parseFloat(((item.wins / (item.wins + losses)) * 100).toFixed(2)) : 0
+      };
+    })
     .sort((a, b) => b.pnl - a.pnl)
     .slice(0, 10);
 

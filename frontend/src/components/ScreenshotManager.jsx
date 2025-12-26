@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   PhotoIcon, 
   XMarkIcon,
@@ -30,19 +30,30 @@ const ScreenshotManager = ({
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setCurrentUpload({
-        file,
-        preview: URL.createObjectURL(file)
-      });
+    if (!file) return;
+    
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      alert(`File size exceeds 10MB limit. Selected file: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+      e.target.value = ''; // Reset input
+      return;
     }
+    
+    setCurrentUpload({
+      file,
+      preview: URL.createObjectURL(file)
+    });
+  };
+
+  const generateUniqueId = () => {
+    return `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${performance.now()}`;
   };
 
   const handleSaveScreenshot = () => {
     if (!currentUpload) return;
 
     const newScreenshot = {
-      id: `new-${Date.now()}-${Math.random()}`,
+      id: generateUniqueId(),
       file: currentUpload.file,
       preview: currentUpload.preview,
       label: currentLabel,
@@ -88,6 +99,21 @@ const ScreenshotManager = ({
   };
 
   const canAddMore = screenshots.length < maxScreenshots;
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      // Cleanup on unmount
+      if (currentUpload?.preview) {
+        URL.revokeObjectURL(currentUpload.preview);
+      }
+      screenshots.forEach(screenshot => {
+        if (screenshot.preview) {
+          URL.revokeObjectURL(screenshot.preview);
+        }
+      });
+    };
+  }, [currentUpload, screenshots]);
 
   return (
     <div className="space-y-4">

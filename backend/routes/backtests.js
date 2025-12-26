@@ -120,7 +120,16 @@ const backtestValidation = [
   body('direction').optional().isIn(['Long', 'Short']).withMessage('Direction must be Long or Short'),
   body('lotSize').optional().isFloat({ min: 0.01 }).withMessage('Lot size must be a positive number'),
   body('confidence').optional().isInt({ min: 1, max: 10 }).withMessage('Confidence must be between 1 and 10'),
-  body('marketCondition').optional().isIn(['trending', 'ranging', 'volatile', 'calm']).withMessage('Invalid market condition')
+  body('marketCondition').optional().isIn(['trending', 'ranging', 'volatile', 'calm']).withMessage('Invalid market condition'),
+  body('riskReward').optional().trim().custom((value) => {
+    // Allow empty string or valid ratio format (e.g., "1:2", "1.5:3", "2:1")
+    if (!value || value === '') return true;
+    const ratioPattern = /^\d+(\.\d+)?:\d+(\.\d+)?$/;
+    if (!ratioPattern.test(value)) {
+      throw new Error('Risk/Reward must be in format "X:Y" (e.g., "1:2", "1.5:3")');
+    }
+    return true;
+  })
 ];
 
 // GET /api/backtests - Get all backtests with filters
@@ -226,7 +235,7 @@ router.get('/', async (req, res) => {
 
     const statistics = stats.length > 0 ? {
       ...stats[0],
-      winRate: stats[0].totalBacktests > 0 ? (stats[0].winningTrades / stats[0].totalBacktests * 100).toFixed(2) : 0
+      winRate: (stats[0].winningTrades + stats[0].losingTrades) > 0 ? (stats[0].winningTrades / (stats[0].winningTrades + stats[0].losingTrades) * 100).toFixed(2) : 0
     } : {
       totalBacktests: 0,
       totalPnL: 0,
@@ -474,7 +483,7 @@ router.get('/patterns', async (req, res) => {
         pattern: p._id,
         totalTrades: p.totalTrades,
         totalPnL: p.totalPnL,
-        winRate: p.totalTrades > 0 ? ((p.wins / p.totalTrades) * 100).toFixed(2) : 0,
+        winRate: (p.wins + p.losses) > 0 ? ((p.wins / (p.wins + p.losses)) * 100).toFixed(2) : 0,
         avgPnL: p.avgPnL,
         avgConfidence: p.avgConfidence
       })),
@@ -482,14 +491,14 @@ router.get('/patterns', async (req, res) => {
         condition: m._id,
         totalTrades: m.totalTrades,
         totalPnL: m.totalPnL,
-        winRate: m.totalTrades > 0 ? ((m.wins / m.totalTrades) * 100).toFixed(2) : 0,
+        winRate: (m.wins + m.losses) > 0 ? ((m.wins / (m.wins + m.losses)) * 100).toFixed(2) : 0,
         avgPnL: m.avgPnL
       })),
       strategies: strategyStats.map(s => ({
         strategy: s._id,
         totalTrades: s.totalTrades,
         totalPnL: s.totalPnL,
-        winRate: s.totalTrades > 0 ? ((s.wins / s.totalTrades) * 100).toFixed(2) : 0,
+        winRate: (s.wins + s.losses) > 0 ? ((s.wins / (s.wins + s.losses)) * 100).toFixed(2) : 0,
         avgPnL: s.avgPnL
       }))
     });
@@ -587,7 +596,7 @@ router.get('/analytics/comprehensive', async (req, res) => {
     const breakEven = backtests.filter(b => b.result === 'be').length;
     const totalPnL = backtests.reduce((sum, b) => sum + (b.pnl || 0), 0);
     const avgPnL = totalPnL / totalTrades;
-    const winRate = (wins / totalTrades) * 100;
+    const winRate = (wins + losses) > 0 ? (wins / (wins + losses)) * 100 : 0;
     
     const winningTrades = backtests.filter(b => b.result === 'win');
     const losingTrades = backtests.filter(b => b.result === 'loss');
@@ -780,26 +789,29 @@ router.get('/analytics/comprehensive', async (req, res) => {
       
       // By hour
       if (!timeAnalysis.byHour[hour]) {
-        timeAnalysis.byHour[hour] = { trades: 0, wins: 0, pnl: 0 };
+        timeAnalysis.byHour[hour] = { trades: 0, wins: 0, losses: 0, pnl: 0 };
       }
       timeAnalysis.byHour[hour].trades++;
       if (b.result === 'win') timeAnalysis.byHour[hour].wins++;
+      if (b.result === 'loss') timeAnalysis.byHour[hour].losses++;
       timeAnalysis.byHour[hour].pnl += (b.pnl || 0);
       
       // By day of week
       if (!timeAnalysis.byDayOfWeek[dayOfWeek]) {
-        timeAnalysis.byDayOfWeek[dayOfWeek] = { trades: 0, wins: 0, pnl: 0 };
+        timeAnalysis.byDayOfWeek[dayOfWeek] = { trades: 0, wins: 0, losses: 0, pnl: 0 };
       }
       timeAnalysis.byDayOfWeek[dayOfWeek].trades++;
       if (b.result === 'win') timeAnalysis.byDayOfWeek[dayOfWeek].wins++;
+      if (b.result === 'loss') timeAnalysis.byDayOfWeek[dayOfWeek].losses++;
       timeAnalysis.byDayOfWeek[dayOfWeek].pnl += (b.pnl || 0);
       
       // By month
       if (!timeAnalysis.byMonth[month]) {
-        timeAnalysis.byMonth[month] = { trades: 0, wins: 0, pnl: 0 };
+        timeAnalysis.byMonth[month] = { trades: 0, wins: 0, losses: 0, pnl: 0 };
       }
       timeAnalysis.byMonth[month].trades++;
       if (b.result === 'win') timeAnalysis.byMonth[month].wins++;
+      if (b.result === 'loss') timeAnalysis.byMonth[month].losses++;
       timeAnalysis.byMonth[month].pnl += (b.pnl || 0);
     });
 
@@ -825,7 +837,7 @@ router.get('/analytics/comprehensive', async (req, res) => {
     const instrumentPerformanceArray = Object.values(instrumentPerformance).map(inst => ({
       ...inst,
       avgPnL: inst.totalPnL / inst.totalTrades,
-      winRate: inst.totalTrades > 0 ? (inst.wins / inst.totalTrades) * 100 : 0
+      winRate: (inst.wins + inst.losses) > 0 ? (inst.wins / (inst.wins + inst.losses)) * 100 : 0
     })).sort((a, b) => b.totalPnL - a.totalPnL);
 
     // Direction Performance
@@ -844,7 +856,7 @@ router.get('/analytics/comprehensive', async (req, res) => {
     Object.keys(directionStats).forEach(dir => {
       const stats = directionStats[dir];
       stats.avgPnL = stats.trades > 0 ? stats.totalPnL / stats.trades : 0;
-      stats.winRate = stats.trades > 0 ? (stats.wins / stats.trades) * 100 : 0;
+      stats.winRate = (stats.wins + stats.losses) > 0 ? (stats.wins / (stats.wins + stats.losses)) * 100 : 0;
     });
 
     // R:R Analysis - Histogram
@@ -883,7 +895,9 @@ router.get('/analytics/comprehensive', async (req, res) => {
       const tradesAtConf = backtests.filter(b => b.confidence === conf);
       if (tradesAtConf.length > 0) {
         const avgPnL = tradesAtConf.reduce((sum, b) => sum + (b.pnl || 0), 0) / tradesAtConf.length;
-        const winRate = tradesAtConf.filter(b => b.result === 'win').length / tradesAtConf.length * 100;
+        const confWins = tradesAtConf.filter(b => b.result === 'win').length;
+        const confLosses = tradesAtConf.filter(b => b.result === 'loss').length;
+        const winRate = (confWins + confLosses) > 0 ? (confWins / (confWins + confLosses)) * 100 : 0;
         confidenceImpact.push({
           confidence: conf,
           avgPnL,
@@ -915,7 +929,7 @@ router.get('/analytics/comprehensive', async (req, res) => {
     const marketConditionArray = Object.values(marketConditionPerformance).map(mc => ({
       ...mc,
       avgPnL: mc.totalPnL / mc.trades,
-      winRate: mc.trades > 0 ? (mc.wins / mc.trades) * 100 : 0
+      winRate: (mc.wins + (mc.losses || 0)) > 0 ? (mc.wins / (mc.wins + (mc.losses || 0))) * 100 : 0
     }));
 
     // Custom Labels Usage
@@ -940,10 +954,18 @@ router.get('/analytics/comprehensive', async (req, res) => {
       }
     });
     const topLabels = Object.values(labelUsage)
-      .map(label => ({
+      .map(label => {
+        // Count losses for each label
+        const labelLosses = backtests.filter(b => 
+          b.customChips && b.customChips.some(chip => 
+            `${chip.name}:${chip.value}` === `${label.name}:${label.value}` && b.result === 'loss'
+          )
+        ).length;
+        return {
         ...label,
-        winRate: label.usageCount > 0 ? (label.wins / label.usageCount) * 100 : 0
-      }))
+          winRate: (label.wins + labelLosses) > 0 ? (label.wins / (label.wins + labelLosses)) * 100 : 0
+        };
+      })
       .sort((a, b) => b.usageCount - a.usageCount)
       .slice(0, 10);
 
@@ -1025,10 +1047,13 @@ router.get('/analytics/comprehensive', async (req, res) => {
     // Best pattern insight
     if (patternPerformance.length > 0) {
       const bestPattern = patternPerformance[0];
+      const patternWinRate = (bestPattern.wins + bestPattern.losses) > 0 
+        ? ((bestPattern.wins / (bestPattern.wins + bestPattern.losses)) * 100).toFixed(1)
+        : 0;
       insights.push({
         type: 'success',
         title: 'Best Performing Pattern',
-        message: `${bestPattern._id} has ${bestPattern.wins}/${bestPattern.totalTrades} wins (${((bestPattern.wins / bestPattern.totalTrades) * 100).toFixed(1)}% win rate) with $${bestPattern.totalPnL.toFixed(2)} total P&L`
+        message: `${bestPattern._id} has ${bestPattern.wins}/${bestPattern.wins + bestPattern.losses} wins (${patternWinRate}% win rate) with $${bestPattern.totalPnL.toFixed(2)} total P&L`
       });
     }
     
@@ -1051,8 +1076,9 @@ router.get('/analytics/comprehensive', async (req, res) => {
     if (avgConfidence > 0) {
       const highConfidenceTrades = backtests.filter(b => b.confidence && b.confidence >= 7);
       const highConfWins = highConfidenceTrades.filter(b => b.result === 'win').length;
-      const highConfWinRate = highConfidenceTrades.length > 0 
-        ? (highConfWins / highConfidenceTrades.length) * 100 
+      const highConfLosses = highConfidenceTrades.filter(b => b.result === 'loss').length;
+      const highConfWinRate = (highConfWins + highConfLosses) > 0 
+        ? (highConfWins / (highConfWins + highConfLosses)) * 100 
         : 0;
       
       if (highConfWinRate > winRate + 10) {
@@ -1117,7 +1143,7 @@ router.get('/analytics/comprehensive', async (req, res) => {
           pattern: p._id,
           totalTrades: p.totalTrades,
           totalPnL: p.totalPnL,
-          winRate: p.totalTrades > 0 ? ((p.wins / p.totalTrades) * 100).toFixed(2) : 0,
+          winRate: (p.wins + p.losses) > 0 ? ((p.wins / (p.wins + p.losses)) * 100).toFixed(2) : 0,
           avgPnL: p.avgPnL,
           avgConfidence: p.avgConfidence
         }))
@@ -1139,7 +1165,8 @@ router.get('/analytics/comprehensive', async (req, res) => {
           hour: parseInt(hour),
           trades: data.trades,
           wins: data.wins,
-          winRate: data.trades > 0 ? ((data.wins / data.trades) * 100).toFixed(1) : 0,
+          losses: data.losses || 0,
+          winRate: (data.wins + (data.losses || 0)) > 0 ? ((data.wins / (data.wins + (data.losses || 0))) * 100).toFixed(1) : 0,
           pnl: data.pnl
         })),
         byDayOfWeek: Object.entries(timeAnalysis.byDayOfWeek).map(([day, data]) => ({
@@ -1147,7 +1174,8 @@ router.get('/analytics/comprehensive', async (req, res) => {
           dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][parseInt(day)],
           trades: data.trades,
           wins: data.wins,
-          winRate: data.trades > 0 ? ((data.wins / data.trades) * 100).toFixed(1) : 0,
+          losses: data.losses || 0,
+          winRate: (data.wins + (data.losses || 0)) > 0 ? ((data.wins / (data.wins + (data.losses || 0))) * 100).toFixed(1) : 0,
           pnl: data.pnl
         })),
         byMonth: Object.entries(timeAnalysis.byMonth).map(([month, data]) => ({
@@ -1155,7 +1183,8 @@ router.get('/analytics/comprehensive', async (req, res) => {
           monthName: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][parseInt(month)],
           trades: data.trades,
           wins: data.wins,
-          winRate: data.trades > 0 ? ((data.wins / data.trades) * 100).toFixed(1) : 0,
+          losses: data.losses || 0,
+          winRate: (data.wins + (data.losses || 0)) > 0 ? ((data.wins / (data.wins + (data.losses || 0))) * 100).toFixed(1) : 0,
           pnl: data.pnl
         }))
       },
@@ -1352,7 +1381,15 @@ const backtestUpdateValidation = [
   body('direction').optional().isIn(['Long', 'Short']).withMessage('Direction must be Long or Short'),
   body('lotSize').optional().isFloat({ min: 0.01 }).withMessage('Lot size must be a positive number'),
   body('positionSize').optional().trim(),
-  body('riskReward').optional().isFloat({ min: 0 }).withMessage('Risk/Reward must be a positive number'),
+  body('riskReward').optional().trim().custom((value) => {
+    // Allow empty string or valid ratio format (e.g., "1:2", "1.5:3", "2:1")
+    if (!value || value === '') return true;
+    const ratioPattern = /^\d+(\.\d+)?:\d+(\.\d+)?$/;
+    if (!ratioPattern.test(value)) {
+      throw new Error('Risk/Reward must be in format "X:Y" (e.g., "1:2", "1.5:3")');
+    }
+    return true;
+  }),
   body('patternIdentified').optional().trim(),
   body('marketCondition').optional().trim(),
   body('confidence').optional().isInt({ min: 1, max: 10 }).withMessage('Confidence must be between 1 and 10'),
