@@ -37,7 +37,6 @@ const checklistResultValidation = [
   body('items.*.isCompleted').isBoolean().withMessage('isCompleted must be a boolean'),
   body('items.*.notes').optional().trim().isLength({ max: 500 }).withMessage('Notes must be less than 500 characters'),
   body('overallNotes').optional().trim().isLength({ max: 1000 }).withMessage('Overall notes must be less than 1000 characters'),
-  body('qualityScore').optional().isInt({ min: 1, max: 10 }).withMessage('Quality score must be between 1 and 10')
 ];
 
 // GET /api/checklists - Get all checklists for a user
@@ -402,7 +401,6 @@ router.post('/results', checklistResultValidation, async (req, res) => {
       checklistId,
       items,
       overallNotes,
-      qualityScore,
       isCompleted
     } = req.body;
 
@@ -435,8 +433,7 @@ router.post('/results', checklistResultValidation, async (req, res) => {
       
       if (isCompleted) {
         result.overallNotes = overallNotes;
-        result.qualityScore = qualityScore;
-        await result.complete(overallNotes, qualityScore);
+        await result.complete(overallNotes);
       }
     } else {
       // Create new result
@@ -450,11 +447,10 @@ router.post('/results', checklistResultValidation, async (req, res) => {
           order: item.order || index + 1
         })),
         overallNotes,
-        qualityScore
       });
 
       if (isCompleted) {
-        await result.complete(overallNotes, qualityScore);
+        await result.complete(overallNotes);
       }
     }
 
@@ -489,7 +485,6 @@ router.put('/results/:id', checklistResultValidation, async (req, res) => {
     const {
       items,
       overallNotes,
-      qualityScore,
       isCompleted
     } = req.body;
 
@@ -505,10 +500,9 @@ router.put('/results/:id', checklistResultValidation, async (req, res) => {
     }));
 
     if (isCompleted) {
-      await result.complete(overallNotes, qualityScore);
+      await result.complete(overallNotes);
     } else {
       result.overallNotes = overallNotes;
-      result.qualityScore = qualityScore;
     }
 
     const updatedResult = await result.save();

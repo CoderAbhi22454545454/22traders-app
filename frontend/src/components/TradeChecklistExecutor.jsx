@@ -428,8 +428,7 @@ const TradeChecklistExecutor = ({
                 placeholder="Add any overall notes about this trade setup..."
               />
             </div>
-            {!isPreTrade && (
-              <div>
+            {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Quality Score (1-10) <span className="text-red-500">*</span>
                 </label>
@@ -446,8 +445,7 @@ const TradeChecklistExecutor = ({
                 <p className="text-sm text-gray-500 mt-1">
                   Rate the overall quality of your trade setup from 1 (poor) to 10 (excellent)
                 </p>
-              </div>
-            )}
+              </div> */}
           </div>
 
           {/* Actions */}
