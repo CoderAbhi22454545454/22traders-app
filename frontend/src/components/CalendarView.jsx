@@ -13,6 +13,31 @@ const CalendarView = ({ onDateClick, selectedDate, userId }) => {
     }
   }, [userId]);
 
+  // Helper function to get trade result (handles both result and tradeOutcome fields)
+  const getTradeResult = (trade) => {
+    if (trade.result) {
+      const result = trade.result.toLowerCase().trim();
+      if (result === 'win') return 'win';
+      if (result === 'loss') return 'loss';
+      if (result === 'be' || result === 'break even' || result === 'breakeven' || result === 'break-even') return 'be';
+      return result;
+    }
+    if (trade.tradeOutcome) {
+      const outcome = trade.tradeOutcome.toLowerCase().trim();
+      if (outcome === 'win') return 'win';
+      if (outcome === 'loss') return 'loss';
+      if (outcome === 'be' || outcome === 'break even' || outcome === 'breakeven' || outcome === 'break-even') return 'be';
+    }
+    // If PnL is available, determine from that
+    if (trade.pnl !== undefined && trade.pnl !== null) {
+      const pnl = parseFloat(trade.pnl);
+      if (pnl > 0) return 'win';
+      if (pnl < 0) return 'loss';
+      if (pnl === 0) return 'be';
+    }
+    return null;
+  };
+
   const fetchTradeDates = async () => {
     setLoading(true);
     try {
@@ -35,10 +60,11 @@ const CalendarView = ({ onDateClick, selectedDate, userId }) => {
         const instrumentName = trade.tradePair || trade.instrument || 'Unknown';
         dateResults[dateKey].instruments.add(instrumentName);
         
-        const result = trade.result || trade.tradeOutcome?.toLowerCase();
+        const result = getTradeResult(trade);
         if (result === 'win') dateResults[dateKey].wins++;
         else if (result === 'loss') dateResults[dateKey].losses++;
-        else dateResults[dateKey].breakEven++;
+        else if (result === 'be') dateResults[dateKey].breakEven++;
+        else dateResults[dateKey].breakEven++; // Default to breakeven if unknown
       });
       
       const formattedDates = Object.entries(dateResults).map(([date, stats]) => ({
@@ -165,7 +191,10 @@ const CalendarView = ({ onDateClick, selectedDate, userId }) => {
     if (!tradeInfo) return;
 
     const rect = e.target.getBoundingClientRect();
-    const winRate = tradeInfo.count > 0 ? ((tradeInfo.wins / tradeInfo.count) * 100).toFixed(1) : 0;
+    // Win rate should exclude breakeven trades - only count wins vs losses
+    const winRate = (tradeInfo.wins + tradeInfo.losses) > 0 
+      ? ((tradeInfo.wins / (tradeInfo.wins + tradeInfo.losses)) * 100).toFixed(1) 
+      : 0;
     
     const tooltipContent = {
       date: date.toLocaleDateString('en-US', { 
@@ -395,7 +424,11 @@ const CalendarView = ({ onDateClick, selectedDate, userId }) => {
         const totalTrades = monthData.reduce((sum, day) => sum + day.count, 0);
         const totalPnL = monthData.reduce((sum, day) => sum + day.totalPnL, 0);
         const totalWins = monthData.reduce((sum, day) => sum + day.wins, 0);
-        const winRate = totalTrades > 0 ? (totalWins / totalTrades * 100).toFixed(1) : 0;
+        const totalLosses = monthData.reduce((sum, day) => sum + day.losses, 0);
+        // Win rate should exclude breakeven trades - only count wins vs losses
+        const winRate = (totalWins + totalLosses) > 0 
+          ? ((totalWins / (totalWins + totalLosses)) * 100).toFixed(1) 
+          : 0;
         const tradingDays = monthData.length;
         
         return (

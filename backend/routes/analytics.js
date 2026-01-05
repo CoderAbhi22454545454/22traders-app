@@ -94,7 +94,7 @@ function calculateOverview(trades) {
   
   const winningTrades = trades.filter(t => getResult(t) === 'win').length;
   const losingTrades = trades.filter(t => getResult(t) === 'loss').length;
-  const breakEvenTrades = trades.filter(t => getResult(t) === 'be' || getResult(t) === 'break even').length;
+  const breakEvenTrades = trades.filter(t => getResult(t) === 'break even').length;
 
   const totalPnL = trades.reduce((sum, t) => sum + (t.pnl || 0), 0);
   const avgPnL = totalPnL / totalTrades;

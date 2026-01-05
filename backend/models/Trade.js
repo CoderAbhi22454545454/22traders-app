@@ -52,7 +52,7 @@ const tradeSchema = new mongoose.Schema({
   },
   result: {
     type: String,
-    enum: ['win', 'loss', 'be']
+    enum: ['win', 'loss', 'be', 'break even'] // Accept both 'be' and 'break even' for backward compatibility
   },
   // New field: Trade Outcome (similar to result but more descriptive)
   tradeOutcome: {

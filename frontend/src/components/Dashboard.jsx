@@ -567,7 +567,28 @@ const Dashboard = ({ userId }) => {
 
     const totalTrades = trades.length;
     const winningTrades = trades.filter(trade => getTradeResult(trade) === 'win').length;
-    const winRate = totalTrades > 0 ? Math.round((winningTrades / totalTrades) * 100) : 0;
+    const losingTrades = trades.filter(trade => getTradeResult(trade) === 'loss').length;
+    const breakevenTrades = trades.filter(trade => getTradeResult(trade) === 'be').length;
+    
+    // Debug logging
+    console.log('📊 Win Rate Calculation:', {
+      totalTrades,
+      winningTrades,
+      losingTrades,
+      breakevenTrades,
+      tradeResults: trades.map(t => ({ 
+        id: t._id, 
+        result: t.result, 
+        tradeOutcome: t.tradeOutcome, 
+        pnl: t.pnl,
+        calculatedResult: getTradeResult(t)
+      }))
+    });
+    
+    // Win rate should exclude breakeven trades - only count wins vs losses
+    const winRate = (winningTrades + losingTrades) > 0 ? Math.round((winningTrades / (winningTrades + losingTrades)) * 100) : 0;
+    
+    console.log('📊 Calculated Win Rate:', winRate + '%');
     
     const totalPnL = trades.reduce((sum, trade) => sum + (parseFloat(trade.pnl) || 0), 0);
     
@@ -776,19 +797,25 @@ const Dashboard = ({ userId }) => {
   // Helper function to get trade result (handles both result and tradeOutcome fields)
   const getTradeResult = (trade) => {
     if (trade.result) {
-      return trade.result.toLowerCase();
+      const result = trade.result.toLowerCase().trim();
+      // Handle various breakeven formats
+      if (result === 'win') return 'win';
+      if (result === 'loss') return 'loss';
+      if (result === 'be' || result === 'break even' || result === 'breakeven' || result === 'break-even') return 'be';
+      return result;
     }
     if (trade.tradeOutcome) {
-      const outcome = trade.tradeOutcome.toLowerCase();
+      const outcome = trade.tradeOutcome.toLowerCase().trim();
       if (outcome === 'win') return 'win';
       if (outcome === 'loss') return 'loss';
-      if (outcome === 'break even' || outcome === 'be') return 'be';
+      if (outcome === 'be' || outcome === 'break even' || outcome === 'breakeven' || outcome === 'break-even') return 'be';
     }
     // If PnL is available, determine from that
     if (trade.pnl !== undefined && trade.pnl !== null) {
-      if (trade.pnl > 0) return 'win';
-      if (trade.pnl < 0) return 'loss';
-      return 'be';
+      const pnl = parseFloat(trade.pnl);
+      if (pnl > 0) return 'win';
+      if (pnl < 0) return 'loss';
+      if (pnl === 0) return 'be';
     }
     return null;
   };
@@ -816,7 +843,8 @@ const Dashboard = ({ userId }) => {
     const wins = todayTrades.filter(t => getTradeResult(t) === 'win').length;
     const losses = todayTrades.filter(t => getTradeResult(t) === 'loss').length;
     const pnl = todayTrades.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0);
-    const winRate = todayTrades.length > 0 ? Math.round((wins / todayTrades.length) * 100) : 0;
+    // Win rate should exclude breakeven trades - only count wins vs losses
+    const winRate = (wins + losses) > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
 
     // Calculate current streak - sort chronologically (oldest to newest) to get proper streak
     let currentStreak = 0;
@@ -960,19 +988,21 @@ const Dashboard = ({ userId }) => {
       weekTrades.forEach(trade => {
         const inst = trade.instrument || 'Unknown';
         if (!instrumentStats[inst]) {
-          instrumentStats[inst] = { wins: 0, total: 0, pnl: 0 };
+          instrumentStats[inst] = { wins: 0, losses: 0, total: 0, pnl: 0 };
         }
         instrumentStats[inst].total++;
         instrumentStats[inst].pnl += parseFloat(trade.pnl) || 0;
-        if (getTradeResult(trade) === 'win') instrumentStats[inst].wins++;
+        const result = getTradeResult(trade);
+        if (result === 'win') instrumentStats[inst].wins++;
+        if (result === 'loss') instrumentStats[inst].losses++;
       });
 
       const bestInstrument = Object.entries(instrumentStats)
         .filter(([_, stats]) => stats.total >= 3)
         .sort((a, b) => {
-          // Sort by win rate first, then by PnL
-          const winRateA = a[1].wins / a[1].total;
-          const winRateB = b[1].wins / b[1].total;
+          // Sort by win rate first (excluding breakeven trades), then by PnL
+          const winRateA = (a[1].wins + a[1].losses) > 0 ? a[1].wins / (a[1].wins + a[1].losses) : 0;
+          const winRateB = (b[1].wins + b[1].losses) > 0 ? b[1].wins / (b[1].wins + b[1].losses) : 0;
           if (Math.abs(winRateA - winRateB) < 0.1) {
             return b[1].pnl - a[1].pnl;
           }
@@ -980,7 +1010,10 @@ const Dashboard = ({ userId }) => {
         })[0];
 
       if (bestInstrument) {
-        const winRate = Math.round((bestInstrument[1].wins / bestInstrument[1].total) * 100);
+        // Win rate should exclude breakeven trades - only count wins vs losses
+        const winRate = (bestInstrument[1].wins + bestInstrument[1].losses) > 0 
+          ? Math.round((bestInstrument[1].wins / (bestInstrument[1].wins + bestInstrument[1].losses)) * 100) 
+          : 0;
         if (winRate >= 60 && bestInstrument[1].pnl > 0) {
           newInsights.push({
             type: 'info',
@@ -1735,7 +1768,9 @@ const Dashboard = ({ userId }) => {
                     );
                   }
                   const sessionWins = sessionTrades.filter(t => getTradeResult(t) === 'win').length;
-                  const sessionWR = sessionTrades.length > 0 ? Math.round((sessionWins / sessionTrades.length) * 100) : 0;
+                  const sessionLosses = sessionTrades.filter(t => getTradeResult(t) === 'loss').length;
+                  // Win rate should exclude breakeven trades - only count wins vs losses
+                  const sessionWR = (sessionWins + sessionLosses) > 0 ? Math.round((sessionWins / (sessionWins + sessionLosses)) * 100) : 0;
                   const sessionPnL = sessionTrades.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0);
                   const avgPnL = sessionTrades.length > 0 ? sessionPnL / sessionTrades.length : 0;
 
