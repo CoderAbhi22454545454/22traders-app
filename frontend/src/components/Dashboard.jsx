@@ -568,27 +568,8 @@ const Dashboard = ({ userId }) => {
     const totalTrades = trades.length;
     const winningTrades = trades.filter(trade => getTradeResult(trade) === 'win').length;
     const losingTrades = trades.filter(trade => getTradeResult(trade) === 'loss').length;
-    const breakevenTrades = trades.filter(trade => getTradeResult(trade) === 'be').length;
-    
-    // Debug logging
-    console.log('📊 Win Rate Calculation:', {
-      totalTrades,
-      winningTrades,
-      losingTrades,
-      breakevenTrades,
-      tradeResults: trades.map(t => ({ 
-        id: t._id, 
-        result: t.result, 
-        tradeOutcome: t.tradeOutcome, 
-        pnl: t.pnl,
-        calculatedResult: getTradeResult(t)
-      }))
-    });
-    
     // Win rate should exclude breakeven trades - only count wins vs losses
     const winRate = (winningTrades + losingTrades) > 0 ? Math.round((winningTrades / (winningTrades + losingTrades)) * 100) : 0;
-    
-    console.log('📊 Calculated Win Rate:', winRate + '%');
     
     const totalPnL = trades.reduce((sum, trade) => sum + (parseFloat(trade.pnl) || 0), 0);
     
@@ -797,25 +778,19 @@ const Dashboard = ({ userId }) => {
   // Helper function to get trade result (handles both result and tradeOutcome fields)
   const getTradeResult = (trade) => {
     if (trade.result) {
-      const result = trade.result.toLowerCase().trim();
-      // Handle various breakeven formats
-      if (result === 'win') return 'win';
-      if (result === 'loss') return 'loss';
-      if (result === 'be' || result === 'break even' || result === 'breakeven' || result === 'break-even') return 'be';
-      return result;
+      return trade.result.toLowerCase();
     }
     if (trade.tradeOutcome) {
-      const outcome = trade.tradeOutcome.toLowerCase().trim();
+      const outcome = trade.tradeOutcome.toLowerCase();
       if (outcome === 'win') return 'win';
       if (outcome === 'loss') return 'loss';
-      if (outcome === 'be' || outcome === 'break even' || outcome === 'breakeven' || outcome === 'break-even') return 'be';
+      if (outcome === 'break even' || outcome === 'be') return 'be';
     }
     // If PnL is available, determine from that
     if (trade.pnl !== undefined && trade.pnl !== null) {
-      const pnl = parseFloat(trade.pnl);
-      if (pnl > 0) return 'win';
-      if (pnl < 0) return 'loss';
-      if (pnl === 0) return 'be';
+      if (trade.pnl > 0) return 'win';
+      if (trade.pnl < 0) return 'loss';
+      return 'be';
     }
     return null;
   };

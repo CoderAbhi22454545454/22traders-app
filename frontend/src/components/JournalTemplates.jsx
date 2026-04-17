@@ -197,77 +197,87 @@ const JournalTemplates = ({ onSelectTemplate, onClose }) => {
       description: 'Reflect on today\'s trading session and key lessons learned',
       icon: CalendarDaysIcon,
       color: 'blue',
-      content: `<h2>📅 Daily Trading Review - ${new Date().toLocaleDateString()}</h2>
+      content: `<h2>📊 Daily Scorecard</h2>
 
-<h3>📊 Market Overview</h3>
-<p><strong>Overall Market Sentiment:</strong> Bullish / Bearish / Neutral</p>
-<p><strong>Major Economic Events:</strong></p>
-<ul>
-  <li>News releases that affected the market</li>
-  <li>Central bank announcements</li>
-  <li>Earnings reports or economic data</li>
-</ul>
-<p><strong>Market Volatility:</strong> High / Medium / Low</p>
 
-<h3>💼 Trading Summary</h3>
-<table style="width: 100%; border: 1px solid #ccc; border-collapse: collapse;">
-  <tr style="background: #f5f5f5;">
-    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Metric</strong></td>
-    <td style="border: 1px solid #ccc; padding: 8px;"><strong>Value</strong></td>
-  </tr>
-  <tr>
-    <td style="border: 1px solid #ccc; padding: 8px;">Total Trades</td>
-    <td style="border: 1px solid #ccc; padding: 8px;">[Enter number]</td>
-  </tr>
-  <tr>
-    <td style="border: 1px solid #ccc; padding: 8px;">Winning Trades</td>
-    <td style="border: 1px solid #ccc; padding: 8px;">[Enter number]</td>
-  </tr>
-  <tr>
-    <td style="border: 1px solid #ccc; padding: 8px;">Losing Trades</td>
-    <td style="border: 1px solid #ccc; padding: 8px;">[Enter number]</td>
-  </tr>
-  <tr>
-    <td style="border: 1px solid #ccc; padding: 8px;">Net P&L</td>
-    <td style="border: 1px solid #ccc; padding: 8px;">[Enter amount]</td>
-  </tr>
-  <tr>
-    <td style="border: 1px solid #ccc; padding: 8px;">Win Rate</td>
-    <td style="border: 1px solid #ccc; padding: 8px;">[Enter percentage]</td>
-  </tr>
-</table>
-
-<h3>🎯 What Went Well Today</h3>
-<ul>
-  <li><strong>Discipline:</strong> Did I stick to my trading plan?</li>
-  <li><strong>Risk Management:</strong> Did I manage my risk properly?</li>
-  <li><strong>Patience:</strong> Did I wait for quality setups?</li>
-  <li><strong>Execution:</strong> How was my trade execution?</li>
-</ul>
-
-<h3>⚠️ Areas for Improvement</h3>
-<ul>
-  <li><strong>Mistakes Made:</strong> What specific errors occurred?</li>
-  <li><strong>Emotional Reactions:</strong> How did emotions affect my trading?</li>
-  <li><strong>Rule Violations:</strong> Which trading rules did I break?</li>
-  <li><strong>Missed Opportunities:</strong> What good setups did I miss?</li>
-</ul>
-
-<h3>📝 Key Lessons Learned</h3>
-<blockquote style="border-left: 4px solid #3b82f6; padding-left: 16px; margin: 16px 0; font-style: italic;">
-What did I learn today that will make me a better trader tomorrow?
-</blockquote>
-
-<h3>🎯 Tomorrow's Action Plan</h3>
-<ol>
-  <li><strong>Primary Focus:</strong> What will be my main focus tomorrow?</li>
-  <li><strong>Instruments to Watch:</strong> Which pairs/instruments to monitor?</li>
-  <li><strong>Risk Parameters:</strong> Maximum risk per trade and daily loss limit</li>
-  <li><strong>Strategy to Use:</strong> Which strategy fits current market conditions?</li>
-</ol>
-
-<hr>
-<p><em>Session Rating (1-10): ___ | Confidence Level: ___ | Stress Level: ___</em></p>`,
+    <p><strong>Total Trades:</strong> 1 [ Wins: ] [ Loss: ] [ BE: ]</p>
+    <p><strong>Net Result (R):</strong></p>
+    <p><strong>Win Rate:</strong></p>
+    <p><strong>Risk per trade:</strong></p>
+    <p><strong>Max drawdown today:</strong></p>
+    
+    <h3>📊 Market Behavior</h3>
+    <p><strong>Market Type:</strong> (Trending / Range / Choppy / Volatile)</p>
+    <p><strong>What did price mainly do today?</strong></p>
+    <ul>
+      <li></li>
+    </ul>
+    <p><strong>Did market conditions favor my strategy?</strong></p>
+    
+    <h3>💼 Trade Log (Detailed)</h3>
+    <h4>Trade #1</h4>
+    <p><strong>Direction:</strong></p>
+    <p><strong>Setup Type:</strong></p>
+    <p><strong>Entry Reason:</strong></p>
+    <p><strong>Market Condition:</strong></p>
+    <p><strong>A+ Setup? Why/why not:</strong></p>
+    <p><strong>Entry Quality (1–10):</strong></p>
+    <p><strong>Exit:</strong> TP / SL / BE / Early Exit</p>
+    <p><strong>Result (R):</strong></p>
+    <p><strong>Rule Followed?</strong></p>
+    <p><strong>Improvement:</strong></p>
+    
+    <h3>🎯 Execution Review</h3>
+    <blockquote>
+    Did I follow my system rules completely? (If not, where exactly did I deviate?)
+    </blockquote>
+    <blockquote>
+    Did I take only valid setups?
+    </blockquote>
+    <p><strong>Did I manage trades properly?</strong> (Holding, SL, TP, early exit)</p>
+    
+    <h3>⚠️ Mistakes & Weak Points</h3>
+    <p><strong>What mistakes did I make today?</strong></p>
+    <p></p>
+    <p><strong>Why did they happen?</strong></p>
+    <p></p>
+    <p><strong>Were they emotional or technical?</strong></p>
+    
+    <h3>🧠 Psychology Analysis</h3>
+    <p><strong>Before trading:</strong> (State of mind)</p>
+    <p><strong>During trading:</strong> (Any fear, hesitation, overconfidence?)</p>
+    <p><strong>After trading:</strong> (Current feeling)</p>
+    <p><strong>Where did psychology affect my decisions the most?</strong></p>
+    
+    <h3>📈 Edge & Pattern Observation</h3>
+    <p><strong>Did my setup work in this market condition?</strong> (Yes / No — explain)</p>
+    <p></p>
+    <p><strong>When did I perform best today?</strong></p>
+    <p></p>
+    <p><strong>When did I perform worst?</strong></p>
+    <p></p>
+    <p><strong>Is there a repeating mistake or pattern?</strong></p>
+    
+    <h3>📝 Key Lesson</h3>
+    <p>Write the most important lesson from today</p>
+    
+    <h3>🎯 Next Session Plan</h3>
+    <p><strong>Will I trade next session?</strong> Yes / No</p>
+    
+    <p><strong>If yes:</strong></p>
+    <ul>
+      <li><strong>Ideal market condition:</strong></li>
+      <li><strong>Market to avoid:</strong></li>
+      <li><strong>Instruments:</strong></li>
+      <li><strong>Risk per trade:</strong></li>
+      <li><strong>Max trades:</strong></li>
+      <li><strong>One rule I must follow:</strong></li>
+    </ul>
+    
+    <h3>📊 Self Evaluation</h3>
+    <p><strong>Execution:</strong> __/10</p>
+    <p><strong>Discipline:</strong> __/10</p>
+    <p><strong>Emotional Control:</strong> __/10</p>`,
       tags: ['daily', 'review', 'reflection', 'performance'],
       mood: 'reflective'
     },
